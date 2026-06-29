@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reading Probe Generator — M-Powered Education</title>
+  <link rel="icon" href="data:,">
+  <script>if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Lora:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background-color: #0f1117; }
+    body { font-family: 'Inter', system-ui, sans-serif; color: #e8ecf4; -webkit-font-smoothing: antialiased; }
+
+    /* ── Nav ── */
+    .site-header { background: #171b26; border-bottom: 1px solid #1e2335; position: sticky; top: 0; z-index: 50; }
+    .site-header-inner { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
+    .site-brand { display: inline-flex; align-items: center; gap: 0.55rem; font-size: 0.95rem; font-weight: 700; color: #e8ecf4; white-space: nowrap; flex-shrink: 0; text-decoration: none; }
+    .site-logo-fallback { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg,#3b5bdb 0%,#6c8fff 100%); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+    .site-nav { display: flex; align-items: center; gap: 0.25rem; }
+    .nav-link { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 600; color: #7d8fb3; text-decoration: none; padding: 0.35rem 0.8rem; border-radius: 6px; transition: color 0.13s, background 0.13s; }
+    .nav-link:hover { color: #e8ecf4; background: rgba(255,255,255,0.05); }
+    .nav-divider { width: 1px; height: 18px; background: #252c42; margin: 0 0.5rem; flex-shrink: 0; }
+
+    /* ── Page layout ── */
+    .page-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+    .page-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #4a5578; margin-bottom: 0.3rem; }
+    .page-title { font-size: 1.4rem; font-weight: 700; color: #e8ecf4; margin: 0 0 0.25rem; }
+    .page-subtitle { font-size: 0.85rem; color: #7d8fb3; line-height: 1.55; margin: 0 0 1.75rem; }
+
+    /* ── Panel ── */
+    .panel { background: #171b26; border: 1px solid #1e2335; border-radius: 14px; padding: 1.35rem 1.6rem; margin-bottom: 1rem; }
+    .panel-title { font-size: 0.8rem; font-weight: 600; color: #e8ecf4; margin: 0 0 0.9rem; }
+
+    /* ── Field chrome ── */
+    .field-label { font-family: 'JetBrains Mono', monospace; font-size: 0.63rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #4a5578; display: block; margin-bottom: 0.3rem; }
+    .field-input, .field-select, .field-textarea {
+      background: #0f1117; border: 1px solid #252c42; border-radius: 7px; color: #e8ecf4;
+      font-family: 'Inter', system-ui, sans-serif; font-size: 0.875rem; padding: 0.45rem 0.7rem;
+      width: 100%; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field-input:focus, .field-select:focus, .field-textarea:focus {
+      border-color: rgba(108,143,255,0.6); box-shadow: 0 0 0 3px rgba(108,143,255,0.12);
+    }
+    .field-select {
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a5578' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.65rem center; padding-right: 2rem; cursor: pointer;
+    }
+    .field-select option { background: #1e2335; color: #e8ecf4; }
+    .field-textarea { resize: vertical; line-height: 1.65; min-height: 180px; }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; margin-top: 0.9rem; }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(108,143,255,0.12); color: #6c8fff;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 700;
+      border: 1px solid rgba(108,143,255,0.35); border-radius: 8px;
+      padding: 0.55rem 1.1rem; cursor: pointer;
+      transition: background 0.14s, border-color 0.14s;
+    }
+    .btn-primary:hover { background: rgba(108,143,255,0.22); border-color: rgba(108,143,255,0.6); }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-green {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(52,211,153,0.12); color: #34d399;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 700;
+      border: 1px solid rgba(52,211,153,0.35); border-radius: 8px;
+      padding: 0.55rem 1.1rem; cursor: pointer;
+      transition: background 0.14s, border-color 0.14s;
+    }
+    .btn-green:hover { background: rgba(52,211,153,0.22); border-color: rgba(52,211,153,0.6); }
+    .btn-green:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: transparent; color: #4a5578;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid #252c42; border-radius: 8px;
+      padding: 0.55rem 1.1rem; cursor: pointer;
+      transition: color 0.14s, border-color 0.14s;
+    }
+    .btn-ghost:hover { color: #e8ecf4; border-color: #4a5578; }
+
+    /* ── Word count badge ── */
+    .word-count-wrap { display: flex; align-items: center; justify-content: flex-end; margin-top: 0.45rem; }
+    .word-count-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 600;
+      color: #4a5578; background: rgba(255,255,255,0.03);
+      border: 1px solid #1e2335; border-radius: 4px; padding: 0.15rem 0.55rem;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .word-count-badge.has-text { color: #6c8fff; border-color: rgba(108,143,255,0.2); }
+
+    /* ── Options row ── */
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+    @media (max-width: 600px) { .options-grid { grid-template-columns: 1fr 1fr; } }
+
+    /* ── Probe output panel ── */
+    #probe-output-panel { display: none; }
+    #probe-output-panel.visible { display: block; }
+
+    .probe-output-inner {
+      background: #0f1117; border: 1px solid #252c42; border-radius: 10px;
+      padding: 1.5rem 1.75rem; margin-top: 0.75rem;
+    }
+
+    /* ── Probe text formatting ── */
+    #probe-text {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 1rem;
+      line-height: 2;           /* generous spacing for finger-tracking */
+      color: #e8ecf4;
+      letter-spacing: 0.01em;
+      word-spacing: 0.05em;
+      white-space: pre-wrap;
+    }
+
+    /* Numbered lines variant */
+    #probe-text.numbered { font-size: 0.925rem; }
+    .probe-line { display: flex; gap: 0.75rem; }
+    .probe-line-num {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+      color: #4a5578; min-width: 2rem; text-align: right;
+      padding-top: 0.18rem; flex-shrink: 0; user-select: none;
+    }
+    .probe-line-text { flex: 1; }
+
+    /* ── Probe meta strip ── */
+    .probe-meta {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+      gap: 0.5rem; margin-bottom: 0.85rem; padding-bottom: 0.75rem;
+      border-bottom: 1px solid #1e2335;
+    }
+    .probe-meta-left { display: flex; flex-direction: column; gap: 0.15rem; }
+    .probe-meta-name { font-size: 0.72rem; font-weight: 600; color: #e8ecf4; }
+    .probe-meta-date { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: #4a5578; }
+    .probe-word-total {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 600;
+      color: #6c8fff; background: rgba(108,143,255,0.08);
+      border: 1px solid rgba(108,143,255,0.2); border-radius: 4px; padding: 0.15rem 0.55rem;
+    }
+
+    /* ── Assessment table ── */
+    .assessment-table-wrap {
+      margin-top: 1.5rem; padding-top: 1rem;
+      border-top: 1px solid #1e2335;
+    }
+    .assessment-table-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 600;
+      letter-spacing: 0.09em; text-transform: uppercase; color: #4a5578; margin-bottom: 0.6rem;
+    }
+    .assessment-table {
+      width: 100%; border-collapse: collapse;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+    }
+    .assessment-table th {
+      text-align: left; font-size: 0.62rem; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: #4a5578; border-bottom: 1px solid #1e2335;
+      padding: 0.35rem 0.75rem 0.35rem 0;
+    }
+    .assessment-table td {
+      color: #7d8fb3; border-bottom: 1px solid #1e2335;
+      padding: 0.55rem 0.75rem 0.55rem 0; vertical-align: middle;
+    }
+    .assessment-table td:last-child { color: #252c42; font-style: italic; font-size: 0.65rem; }
+    .write-in {
+      display: inline-block; min-width: 80px; border-bottom: 1px solid #252c42;
+      height: 1.2rem; vertical-align: bottom;
+    }
+
+    /* ── Empty state ── */
+    .empty-state { font-size: 0.85rem; color: #4a5578; font-style: italic; padding: 0.5rem 0 0; }
+
+    /* ══════════════════════════════════════════════════════
+       PRINT STYLES
+       Hides everything except #print-zone.
+       Probe text is set in a clean serif at a comfortable
+       reading size. Assessment table gets solid borders.
+    ══════════════════════════════════════════════════════ */
+    @media print {
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      /* Hide everything */
+      body > * { display: none !important; }
+      .site-header { display: none !important; }
+
+      /* Show only the print zone */
+      #print-zone { display: block !important; }
+
+      #print-zone {
+        background: #fff;
+        color: #111;
+        font-family: 'Lora', Georgia, serif;
+        padding: 1.5cm 2cm;
+        max-width: 100%;
+      }
+
+      /* Print header */
+      .print-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.2rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1.5px solid #111;
+      }
+      .print-header-left h1 {
+        font-size: 13pt;
+        font-weight: 700;
+        margin: 0 0 0.2rem;
+        color: #111;
+        font-family: 'Inter', sans-serif;
+      }
+      .print-header-left p {
+        font-size: 8.5pt;
+        color: #555;
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+      }
+      .print-header-right {
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        color: #555;
+        text-align: right;
+        line-height: 1.6;
+      }
+      .print-header-right strong { color: #111; }
+
+      /* Student name / date fill-ins */
+      .print-fillins {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.2rem;
+        font-family: 'Inter', sans-serif;
+        font-size: 9pt;
+        color: #333;
+      }
+      .print-fillin-item { display: flex; flex-direction: column; gap: 0.25rem; }
+      .print-fillin-label { font-size: 7.5pt; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #666; }
+      .print-fillin-line { border-bottom: 1px solid #333; height: 1.1rem; }
+
+      /* Probe body text */
+      .print-probe-text {
+        font-family: 'Lora', Georgia, serif;
+        font-size: 13pt;
+        line-height: 2.2;
+        color: #111;
+        white-space: pre-wrap;
+        margin-bottom: 1.5rem;
+      }
+      .print-probe-text.numbered { font-size: 12pt; }
+      .probe-line-num { color: #aaa !important; }
+
+      /* Word count banner */
+      .print-word-count {
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        color: #444;
+        text-align: right;
+        margin-bottom: 1.2rem;
+      }
+
+      /* Assessment table */
+      .print-assessment { margin-top: 1.2rem; border-top: 1.5px solid #111; padding-top: 0.75rem; }
+      .print-assessment-label {
+        font-family: 'Inter', sans-serif; font-size: 8pt; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase; color: #333;
+        margin-bottom: 0.5rem;
+      }
+      .print-table {
+        width: 100%; border-collapse: collapse;
+        font-family: 'Inter', sans-serif; font-size: 9pt;
+      }
+      .print-table th {
+        text-align: left; font-size: 7.5pt; font-weight: 700;
+        letter-spacing: 0.07em; text-transform: uppercase; color: #444;
+        border-bottom: 1px solid #333; padding: 0.3rem 1rem 0.3rem 0;
+      }
+      .print-table td {
+        border-bottom: 1px solid #ccc;
+        padding: 0.55rem 1rem 0.55rem 0;
+        color: #222;
+      }
+      .print-table td.write-col { min-width: 120px; border-bottom: 1px solid #333; }
+      .print-table td.note-col { color: #888; font-size: 8pt; font-style: italic; }
+
+      /* Notes area */
+      .print-notes {
+        margin-top: 1.2rem; border-top: 1px solid #ccc; padding-top: 0.75rem;
+        font-family: 'Inter', sans-serif;
+      }
+      .print-notes-label { font-size: 7.5pt; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #555; margin-bottom: 0.5rem; }
+      .print-notes-lines { display: flex; flex-direction: column; gap: 1.1rem; }
+      .print-notes-line { border-bottom: 1px solid #ccc; height: 0.1rem; }
+    }
+
+    /* Hide print zone on screen */
+    #print-zone { display: none; }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a href="https://caseload.mpowerededucation.com/" class="site-brand">
+        <span class="site-logo-fallback">M</span>
+        M-Powered Education
+      </a>
+      <nav class="site-nav">
+        <a href="index.html" class="nav-link">Data Tools</a>
+        <div class="nav-divider"></div>
+        <a href="https://www.mpowerededucation.com/dashboard.html" class="nav-link">Dashboard</a>
+        <div class="nav-divider"></div>
+        <a href="https://caseload.mpowerededucation.com/" class="nav-link">&larr; Caseload Manager</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="page-wrap">
+
+      <p class="page-eyebrow">Reading Assessment</p>
+      <h1 class="page-title">Probe Generator</h1>
+      <p class="page-subtitle">Paste curriculum text to generate a formatted reading probe. Print it with a clean layout and built-in scoring table for in-person administration.</p>
+
+      <!-- ── Source Text Panel ── -->
+      <div class="panel">
+        <p class="panel-title">Source Text</p>
+
+        <label class="field-label" for="source-text">Paste passage text</label>
+        <textarea
+          id="source-text"
+          class="field-textarea"
+          style="min-height:220px;"
+          placeholder="Paste the reading passage here. The generator will format it into a clean probe and calculate the total word count."
+        ></textarea>
+        <div class="word-count-wrap">
+          <span class="word-count-badge" id="word-count-badge">0 words</span>
+        </div>
+      </div>
+
+      <!-- ── Options Panel ── -->
+      <div class="panel">
+        <p class="panel-title">Probe Options</p>
+        <div class="options-grid">
+          <div>
+            <label class="field-label" for="opt-passage-title">Passage Title <span style="font-weight:400;text-transform:none;font-size:0.62rem;color:#252c42;">(optional)</span></label>
+            <input type="text" id="opt-passage-title" class="field-input" placeholder="e.g. Charlotte's Web, Ch. 3" />
+          </div>
+          <div>
+            <label class="field-label" for="opt-grade">Grade Level <span style="font-weight:400;text-transform:none;font-size:0.62rem;color:#252c42;">(optional)</span></label>
+            <input type="text" id="opt-grade" class="field-input" placeholder="e.g. 3rd" />
+          </div>
+          <div>
+            <label class="field-label" for="opt-font-size">Text Size</label>
+            <select id="opt-font-size" class="field-select">
+              <option value="1rem">Normal (16px)</option>
+              <option value="1.125rem">Large (18px)</option>
+              <option value="1.25rem">X-Large (20px)</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="opt-line-height">Line Spacing</label>
+            <select id="opt-line-height" class="field-select">
+              <option value="1.9">Comfortable</option>
+              <option value="2.2" selected>Generous</option>
+              <option value="2.6">Wide</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="opt-numbering">Line Numbers</label>
+            <select id="opt-numbering" class="field-select">
+              <option value="none">None</option>
+              <option value="every5">Every 5 lines</option>
+              <option value="all">Every line</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="opt-trial-rows">Score Table Rows</label>
+            <select id="opt-trial-rows" class="field-select">
+              <option value="1">1 trial</option>
+              <option value="2">2 trials</option>
+              <option value="3" selected>3 trials</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="btn-generate" class="btn-primary" onclick="generateProbe()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Generate Probe
+          </button>
+          <button id="btn-clear" class="btn-ghost" onclick="clearAll()">Clear</button>
+        </div>
+      </div>
+
+      <!-- ── Probe Output Panel (screen view) ── -->
+      <div class="panel" id="probe-output-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">
+          <p class="panel-title" style="margin:0;">Generated Probe</p>
+          <button id="btn-print" class="btn-green" onclick="printProbe()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print Probe
+          </button>
+        </div>
+
+        <div class="probe-output-inner">
+          <!-- Meta strip -->
+          <div class="probe-meta">
+            <div class="probe-meta-left">
+              <span class="probe-meta-name" id="screen-title">Reading Probe</span>
+              <span class="probe-meta-date" id="screen-date"></span>
+            </div>
+            <span class="probe-word-total" id="screen-word-count"></span>
+          </div>
+
+          <!-- Probe body -->
+          <div id="probe-text"></div>
+
+          <!-- Screen assessment table -->
+          <div class="assessment-table-wrap">
+            <p class="assessment-table-label">Scoring Table</p>
+            <table class="assessment-table" id="screen-score-table">
+              <thead>
+                <tr>
+                  <th>Trial</th>
+                  <th>Words Read</th>
+                  <th>Errors</th>
+                  <th>WCPM</th>
+                  <th>Accuracy %</th>
+                </tr>
+              </thead>
+              <tbody id="screen-score-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-wrap -->
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════
+       PRINT ZONE — only this element is shown when printing.
+       Built fresh each time printProbe() is called.
+  ══════════════════════════════════════════════════════ -->
+  <div id="print-zone" aria-hidden="true"></div>
+
+  <script>
+  'use strict';
+
+  /* ── Live word counter ── */
+  var sourceTA = document.getElementById('source-text');
+  var countBadge = document.getElementById('word-count-badge');
+
+  sourceTA.addEventListener('input', function() {
+    var count = countWords(this.value);
+    countBadge.textContent = count + (count === 1 ? ' word' : ' words');
+    countBadge.className = 'word-count-badge' + (count > 0 ? ' has-text' : '');
+  });
+
+  function countWords(str) {
+    var s = str.trim();
+    if (!s) return 0;
+    return s.split(/\s+/).length;
+  }
+
+  /* ── Escape HTML ── */
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── generateProbe() ── */
+  function generateProbe() {
+    var raw = sourceTA.value.trim();
+    if (!raw) {
+      sourceTA.focus();
+      return;
+    }
+
+    var title    = document.getElementById('opt-passage-title').value.trim() || 'Reading Probe';
+    var grade    = document.getElementById('opt-grade').value.trim();
+    var fontSize = document.getElementById('opt-font-size').value;
+    var lineH    = document.getElementById('opt-line-height').value;
+    var numbering= document.getElementById('opt-numbering').value;
+    var trialRows= parseInt(document.getElementById('opt-trial-rows').value, 10) || 3;
+    var totalWords = countWords(raw);
+
+    /* ── Build probe text DOM ── */
+    var probeEl = document.getElementById('probe-text');
+    probeEl.style.fontSize   = fontSize;
+    probeEl.style.lineHeight = lineH;
+    probeEl.innerHTML = '';
+
+    if (numbering === 'none') {
+      probeEl.className = '';
+      probeEl.textContent = raw;
+    } else {
+      probeEl.className = 'numbered';
+      // Split into lines of ~10 words for numbered display
+      var words = raw.split(/\s+/);
+      var wordsPerLine = 10;
+      var lines = [];
+      for (var i = 0; i < words.length; i += wordsPerLine) {
+        lines.push(words.slice(i, i + wordsPerLine).join(' '));
+      }
+      lines.forEach(function(line, idx) {
+        var lineNum = idx + 1;
+        var showNum = (numbering === 'all') || (lineNum % 5 === 0);
+        var wrap = document.createElement('div');
+        wrap.className = 'probe-line';
+
+        var numSpan = document.createElement('span');
+        numSpan.className = 'probe-line-num';
+        numSpan.textContent = showNum ? lineNum : '';
+        numSpan.setAttribute('aria-hidden', 'true');
+
+        var textSpan = document.createElement('span');
+        textSpan.className = 'probe-line-text';
+        textSpan.textContent = line;
+
+        wrap.appendChild(numSpan);
+        wrap.appendChild(textSpan);
+        probeEl.appendChild(wrap);
+      });
+    }
+
+    /* ── Meta strip ── */
+    var today = new Date();
+    var dateStr = (today.getMonth()+1) + '/' + today.getDate() + '/' + today.getFullYear();
+    var titleStr = title + (grade ? ' · Grade ' + grade : '');
+
+    document.getElementById('screen-title').textContent = titleStr;
+    document.getElementById('screen-date').textContent  = 'Generated ' + dateStr;
+    document.getElementById('screen-word-count').textContent = totalWords + ' words total';
+
+    /* ── Score table ── */
+    var tbody = document.getElementById('screen-score-tbody');
+    tbody.innerHTML = '';
+    for (var r = 1; r <= trialRows; r++) {
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>Trial ' + r + '</td>' +
+        '<td><span class="write-in"></span></td>' +
+        '<td><span class="write-in"></span></td>' +
+        '<td><span class="write-in"></span></td>' +
+        '<td><span class="write-in"></span></td>';
+      tbody.appendChild(tr);
+    }
+
+    /* ── Show output panel ── */
+    var panel = document.getElementById('probe-output-panel');
+    panel.classList.add('visible');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ── clearAll() ── */
+  function clearAll() {
+    sourceTA.value = '';
+    countBadge.textContent = '0 words';
+    countBadge.className = 'word-count-badge';
+    document.getElementById('probe-output-panel').classList.remove('visible');
+    document.getElementById('probe-text').innerHTML = '';
+    document.getElementById('opt-passage-title').value = '';
+    document.getElementById('opt-grade').value = '';
+    sourceTA.focus();
+  }
+
+  /* ── printProbe() ── */
+  function printProbe() {
+    var raw        = sourceTA.value.trim();
+    var title      = document.getElementById('opt-passage-title').value.trim() || 'Reading Probe';
+    var grade      = document.getElementById('opt-grade').value.trim();
+    var fontSize   = document.getElementById('opt-font-size').value;
+    var lineH      = document.getElementById('opt-line-height').value;
+    var numbering  = document.getElementById('opt-numbering').value;
+    var trialRows  = parseInt(document.getElementById('opt-trial-rows').value, 10) || 3;
+    var totalWords = countWords(raw);
+
+    var today   = new Date();
+    var dateStr = (today.getMonth()+1) + '/' + today.getDate() + '/' + today.getFullYear();
+    var titleStr = esc(title) + (grade ? ' &nbsp;&middot;&nbsp; Grade ' + esc(grade) : '');
+
+    /* ── Build probe body HTML for print ── */
+    var probeBodyHtml = '';
+    if (numbering === 'none') {
+      probeBodyHtml = '<div class="print-probe-text" style="font-size:' + fontSize + ';line-height:' + lineH + ';">' + esc(raw) + '</div>';
+    } else {
+      var words = raw.split(/\s+/);
+      var wordsPerLine = 10;
+      var linesArr = [];
+      for (var i = 0; i < words.length; i += wordsPerLine) {
+        linesArr.push(words.slice(i, i + wordsPerLine).join(' '));
+      }
+      var linesHtml = linesArr.map(function(line, idx) {
+        var lineNum = idx + 1;
+        var showNum = (numbering === 'all') || (lineNum % 5 === 0);
+        return '<div class="probe-line">' +
+          '<span class="probe-line-num" aria-hidden="true">' + (showNum ? lineNum : '') + '</span>' +
+          '<span class="probe-line-text">' + esc(line) + '</span>' +
+          '</div>';
+      }).join('');
+      probeBodyHtml = '<div class="print-probe-text numbered" style="font-size:' + fontSize + ';line-height:' + lineH + ';">' + linesHtml + '</div>';
+    }
+
+    /* ── Build score table rows ── */
+    var scoreRowsHtml = '';
+    for (var r = 1; r <= trialRows; r++) {
+      scoreRowsHtml +=
+        '<tr>' +
+          '<td>Trial ' + r + '</td>' +
+          '<td class="write-col"></td>' +
+          '<td class="write-col"></td>' +
+          '<td class="write-col"></td>' +
+          '<td class="write-col"></td>' +
+          '<td class="note-col">/ ' + totalWords + ' words</td>' +
+        '</tr>';
+    }
+
+    /* ── Assemble print zone ── */
+    document.getElementById('print-zone').innerHTML =
+      '<div class="print-header">' +
+        '<div class="print-header-left">' +
+          '<h1>' + titleStr + '</h1>' +
+          '<p>M-Powered Education &nbsp;&middot;&nbsp; Reading Probe</p>' +
+        '</div>' +
+        '<div class="print-header-right">' +
+          'Date: <strong>' + dateStr + '</strong><br>' +
+          'Total Words: <strong>' + totalWords + '</strong>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="print-fillins">' +
+        '<div class="print-fillin-item"><span class="print-fillin-label">Student Name</span><div class="print-fillin-line"></div></div>' +
+        '<div class="print-fillin-item"><span class="print-fillin-label">Date Administered</span><div class="print-fillin-line"></div></div>' +
+        '<div class="print-fillin-item"><span class="print-fillin-label">Administered By</span><div class="print-fillin-line"></div></div>' +
+      '</div>' +
+
+      probeBodyHtml +
+
+      '<div class="print-word-count">Total words in passage: <strong>' + totalWords + '</strong></div>' +
+
+      '<div class="print-assessment">' +
+        '<div class="print-assessment-label">Scoring</div>' +
+        '<table class="print-table">' +
+          '<thead><tr>' +
+            '<th>Trial</th>' +
+            '<th>Words Read (1 min)</th>' +
+            '<th>Errors</th>' +
+            '<th>WCPM</th>' +
+            '<th>Accuracy %</th>' +
+            '<th>Notes</th>' +
+          '</tr></thead>' +
+          '<tbody>' + scoreRowsHtml + '</tbody>' +
+        '</table>' +
+      '</div>' +
+
+      '<div class="print-notes">' +
+        '<div class="print-notes-label">Observation Notes</div>' +
+        '<div class="print-notes-lines">' +
+          '<div class="print-notes-line"></div>' +
+          '<div class="print-notes-line"></div>' +
+          '<div class="print-notes-line"></div>' +
+        '</div>' +
+      '</div>';
+
+    window.print();
+  }
+  </script>
+
+</body>
+</html>

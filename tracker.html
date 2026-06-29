@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Batch Tracker — M-Powered Education</title>
+  <link rel="icon" href="data:,">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background-color: #0f1117; }
+    body { font-family: 'Inter', system-ui, sans-serif; color: #e8ecf4; -webkit-font-smoothing: antialiased; }
+
+    /* ── Nav ── */
+    .site-header { background: #171b26; border-bottom: 1px solid #1e2335; position: sticky; top: 0; z-index: 50; }
+    .site-header-inner { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
+    .site-brand { display: inline-flex; align-items: center; gap: 0.55rem; font-size: 0.95rem; font-weight: 700; color: #e8ecf4; white-space: nowrap; flex-shrink: 0; text-decoration: none; }
+    .site-logo-fallback { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg,#3b5bdb 0%,#6c8fff 100%); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+    .site-nav { display: flex; align-items: center; gap: 0.25rem; }
+    .nav-link { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 600; color: #7d8fb3; text-decoration: none; padding: 0.35rem 0.8rem; border-radius: 6px; transition: color 0.13s, background 0.13s; }
+    .nav-link:hover { color: #e8ecf4; background: rgba(255,255,255,0.05); }
+    .nav-divider { width: 1px; height: 18px; background: #252c42; margin: 0 0.5rem; flex-shrink: 0; }
+
+    /* ── Page states ── */
+    #state-loading, #state-error, #state-main { display: none; }
+    #state-loading.active, #state-error.active, #state-main.active { display: block; }
+
+    /* ── Page layout ── */
+    .page-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+    .page-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #4a5578; margin-bottom: 0.3rem; }
+    .page-title { font-size: 1.4rem; font-weight: 700; color: #e8ecf4; margin: 0 0 0.25rem; }
+    .page-subtitle { font-size: 0.85rem; color: #7d8fb3; line-height: 1.55; margin: 0 0 1.75rem; }
+
+    /* ── Panel ── */
+    .panel { background: #171b26; border: 1px solid #1e2335; border-radius: 14px; padding: 1.35rem 1.6rem; margin-bottom: 1rem; }
+    .panel-title { font-size: 0.8rem; font-weight: 600; color: #e8ecf4; margin: 0 0 0.9rem; }
+
+    /* ── Field chrome ── */
+    .field-label { font-family: 'JetBrains Mono', monospace; font-size: 0.63rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #4a5578; display: block; margin-bottom: 0.3rem; }
+    .field-input, .field-select, .field-textarea {
+      background: #0f1117; border: 1px solid #252c42; border-radius: 7px; color: #e8ecf4;
+      font-family: 'Inter', system-ui, sans-serif; font-size: 0.875rem; padding: 0.45rem 0.7rem;
+      width: 100%; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field-input:focus, .field-select:focus, .field-textarea:focus {
+      border-color: rgba(108,143,255,0.6); box-shadow: 0 0 0 3px rgba(108,143,255,0.12);
+    }
+    .field-select {
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a5578' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.65rem center; padding-right: 2rem; cursor: pointer;
+    }
+    .field-select option { background: #1e2335; color: #e8ecf4; }
+    .field-textarea { resize: vertical; line-height: 1.55; min-height: 72px; }
+
+    /* ── Student selector panel ── */
+    #student-info { display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #1e2335; }
+    #student-info.visible { display: block; }
+    .student-meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+    .meta-item { display: flex; flex-direction: column; gap: 0.15rem; }
+    .meta-label { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: #4a5578; }
+    .meta-value { font-size: 0.82rem; color: #c4cde4; }
+
+    /* ── Goal cards ── */
+    .goal-tracker-card {
+      background: #0f1117; border: 1px solid #252c42; border-radius: 10px;
+      padding: 1.1rem 1.25rem; margin-bottom: 0.75rem;
+      animation: cardIn 0.18s ease forwards;
+    }
+    @keyframes cardIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+
+    .goal-num-badge {
+      display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase; color: #6c8fff;
+      background: rgba(108,143,255,0.1); border: 1px solid rgba(108,143,255,0.2);
+      border-radius: 4px; padding: 0.15rem 0.5rem; margin-bottom: 0.6rem;
+    }
+    .goal-description { font-size: 0.875rem; color: #e8ecf4; line-height: 1.55; margin: 0 0 0.5rem; }
+    .goal-sdi { font-size: 0.78rem; color: #6c8fff; line-height: 1.45; margin: 0 0 0.6rem; }
+    .goal-sdi-label { color: #4a5578; }
+
+    .goal-meta-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.85rem; }
+    .goal-meta-chip {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; color: #4a5578;
+      background: rgba(255,255,255,0.03); border: 1px solid #1e2335;
+      border-radius: 4px; padding: 0.15rem 0.5rem;
+    }
+    .goal-meta-chip.target { color: #34d399; background: rgba(52,211,153,0.06); border-color: rgba(52,211,153,0.18); }
+
+    .goal-log-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+    @media (max-width: 560px) { .goal-log-grid { grid-template-columns: 1fr; } }
+
+    /* ── Divider ── */
+    .goal-divider { border: none; border-top: 1px solid #1e2335; margin: 0.65rem 0 0.75rem; }
+
+    /* ── Submit bar ── */
+    .submit-bar { position: sticky; bottom: 0; background: #0f1117; border-top: 1px solid #1e2335; padding: 0.9rem 0; margin-top: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-submit {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(52,211,153,0.12); color: #34d399;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 700;
+      border: 1px solid rgba(52,211,153,0.35); border-radius: 8px;
+      padding: 0.55rem 1.25rem; cursor: pointer;
+      transition: background 0.14s, border-color 0.14s;
+    }
+    .btn-submit:hover:not(:disabled) { background: rgba(52,211,153,0.22); border-color: rgba(52,211,153,0.6); }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+    #submit-status { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #4a5578; }
+    #submit-status.ok  { color: #34d399; }
+    #submit-status.err { color: #f87171; }
+
+    /* ── Empty / error states ── */
+    .empty-state { font-size: 0.85rem; color: #4a5578; font-style: italic; padding: 1rem 0; }
+    .error-box { background: rgba(248,113,113,0.06); border: 1px solid rgba(248,113,113,0.25); border-radius: 10px; padding: 1rem 1.25rem; color: #f87171; font-size: 0.85rem; line-height: 1.5; }
+
+    /* ── Loading spinner ── */
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #252c42; border-top-color: #6c8fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    #toast { position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%) translateY(6px); background: #171b26; border: 1px solid #252c42; border-radius: 10px; padding: 0.6rem 1.1rem; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace; color: #e8ecf4; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 100; white-space: nowrap; }
+    #toast.show    { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.success { border-color: rgba(52,211,153,0.4); color: #34d399; }
+    #toast.error   { border-color: rgba(248,113,113,0.4); color: #f87171; }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a href="https://caseload.mpowerededucation.com/" class="site-brand">
+        <span class="site-logo-fallback">M</span>
+        M-Powered Education
+      </a>
+      <nav class="site-nav">
+        <a href="index.html" class="nav-link">Data Tools</a>
+        <div class="nav-divider"></div>
+        <a href="https://caseload.mpowerededucation.com/" class="nav-link">Caseload Manager</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="page-wrap">
+
+      <!-- Loading state -->
+      <div id="state-loading">
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:3rem 0;color:#4a5578;font-size:0.85rem;">
+          <div class="spinner"></div>
+          Loading roster…
+        </div>
+      </div>
+
+      <!-- Error state -->
+      <div id="state-error">
+        <div style="padding:2rem 0;">
+          <div class="error-box" id="error-message">Could not load roster.</div>
+        </div>
+      </div>
+
+      <!-- Main UI -->
+      <div id="state-main">
+
+        <p class="page-eyebrow">Progress Monitoring</p>
+        <h1 class="page-title">Batch Tracker</h1>
+        <p class="page-subtitle">Select a student, fill in session results for each goal, then submit all at once.</p>
+
+        <!-- Student Selector -->
+        <div class="panel" style="margin-bottom:1.25rem;">
+          <label class="field-label" for="student-select">Student</label>
+          <select id="student-select" class="field-select">
+            <option value="">— Select a student —</option>
+          </select>
+
+          <!-- Student meta strip, shown after selection -->
+          <div id="student-info">
+            <div class="student-meta">
+              <div class="meta-item">
+                <span class="meta-label">DatabaseID</span>
+                <span class="meta-value" id="meta-id">—</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Disability</span>
+                <span class="meta-value" id="meta-disability">—</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">IEP End</span>
+                <span class="meta-value" id="meta-iep-end">—</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Goals</span>
+                <span class="meta-value" id="meta-goal-count">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session date + goals section, shown after selection -->
+        <div id="session-section" style="display:none;">
+
+          <!-- Session header -->
+          <div class="panel" style="margin-bottom:1.25rem;">
+            <p class="panel-title">Session Details</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+              <div>
+                <label class="field-label" for="session-date">Session Date</label>
+                <input type="date" id="session-date" class="field-input" />
+              </div>
+              <div>
+                <label class="field-label" for="session-setting">Setting</label>
+                <select id="session-setting" class="field-select">
+                  <option value="">— Optional —</option>
+                  <option value="small-group">Small Group</option>
+                  <option value="1:1">1:1 Pull-out</option>
+                  <option value="push-in">Push-in / Co-teach</option>
+                  <option value="independent">Independent Work</option>
+                  <option value="whole-class">Whole Class</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Goal cards -->
+          <div class="panel" style="margin-bottom:0.5rem;">
+            <p class="panel-title">Goals</p>
+            <div id="goal-list"></div>
+          </div>
+
+          <!-- Submit bar -->
+          <div class="submit-bar">
+            <button id="btn-submit" class="btn-submit" disabled>Submit Session</button>
+            <span id="submit-status"></span>
+          </div>
+
+        </div><!-- /session-section -->
+
+      </div><!-- /state-main -->
+    </div>
+  </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  'use strict';
+
+  /* ══════════════════════════════════════════════════════════════
+     CONFIG
+     GAS_URL is the same endpoint used by caseload.mpowerededucation.com.
+     Cross-subdomain fetches work because GAS exec URLs use
+     Content-Type: text/plain (no preflight) for POST requests.
+
+     NOTE — logGoalData route:
+     The 'logGoalData' action does not yet exist in Code.gs.
+     Add the following route to your doPost() function:
+
+       if (action === 'logGoalData') {
+         var logSheet = doc.getSheetByName('ProgressLog')
+                        || doc.insertSheet('ProgressLog');
+         var entries = Array.isArray(rawData.entries) ? rawData.entries : [];
+         entries.forEach(function(e) {
+           logSheet.appendRow([
+             e.submittedAt,
+             e.studentId,
+             e.studentTag,
+             e.sessionDate,
+             e.setting    || '',
+             e.goal_id,
+             e.goalIndex,
+             e.result,
+             e.accuracy   != null ? e.accuracy : '',
+             e.notes      || '',
+           ]);
+         });
+         return _json({ result: 'success', logged: entries.length });
+       }
+
+  ══════════════════════════════════════════════════════════════ */
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbybVEYwsl68FUfUBlOM5aWJXgtbH38mjcjFns0QkY5Patls-QJiSOO3eazstDhOMfJg/exec';
+
+  /* ── COL indices — must stay in sync with Code.gs / modify-student.html ── */
+  var COL = {
+    TIMESTAMP: 0, ID: 1, TAG: 2, FIRST_NAME: 3, LAST_NAME: 4,
+    IEP_START: 5, IEP_END: 6, DISABILITY: 7, SUPPLEMENTAL: 8,
+    GOALS: 9, ACCOMMODATIONS: 10
+  };
+
+  /* ── State ── */
+  var _roster  = [];   // all parsed student rows
+  var _student = null; // currently selected student row (array)
+  var _goals   = [];   // parsed goals for current student
+
+  /* ══════════════════════════════════════════════════════════════
+     GAS POST helper
+     Uses text/plain to avoid a preflight (matches caseload site).
+  ══════════════════════════════════════════════════════════════ */
+  function gasPost(payload) {
+    return fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.json(); });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     GOAL PARSING
+     Mirrors parseGoals / _normaliseGoalObj / _buildGoalShell
+     from modify-student.html exactly.
+  ══════════════════════════════════════════════════════════════ */
+  function buildGoalShell(src) {
+    src = src || {};
+    var sdiSrc = (src.sdi && typeof src.sdi === 'object') ? src.sdi : {};
+    var pmSrc  = (src.progress_monitoring && typeof src.progress_monitoring === 'object') ? src.progress_monitoring : {};
+    var stdSrc = (src.standard_alignment  && typeof src.standard_alignment  === 'object') ? src.standard_alignment  : {};
+    return {
+      goal_id    : src.goal_id || null,
+      description: String(src.description || '').trim(),
+      domain     : String(src.domain || 'literacy'),
+      standard_alignment: {
+        code: String(stdSrc.code||''), description: String(stdSrc.description||''), grade_band: String(stdSrc.grade_band||'')
+      },
+      sdi: {
+        strategy: String(sdiSrc.strategy||''), evidence_base: String(sdiSrc.evidence_base||''),
+        delivery_model: String(sdiSrc.delivery_model||''), frequency: String(sdiSrc.frequency||'')
+      },
+      artifact_type: String(src.artifact_type || 'graphic_organizer'),
+      progress_monitoring: {
+        metric: String(pmSrc.metric||'accuracy'), unit: String(pmSrc.unit||'percent'),
+        baseline: (pmSrc.baseline != null) ? parseFloat(pmSrc.baseline)||null : null,
+        target:   (pmSrc.target   != null) ? parseFloat(pmSrc.target)  ||null : null,
+        mastery_criterion:     String(pmSrc.mastery_criterion||''),
+        method_of_measurement: String(pmSrc.method_of_measurement||'')
+      }
+    };
+  }
+
+  function normaliseGoalObj(g) {
+    if (g === null || g === undefined) return null;
+    if (typeof g === 'string') {
+      var t = g.trim();
+      if (!t) return null;
+      if (t.charAt(0) === '{') { try { return normaliseGoalObj(JSON.parse(t)); } catch(e) {} }
+      return buildGoalShell({ description: t });
+    }
+    if (Array.isArray(g)) return null;
+    if (typeof g === 'object') {
+      if (g.sdi && typeof g.sdi === 'object') return buildGoalShell(g);
+      var desc = String(g.description || g.text || g.label || '').trim();
+      var legacySdi = String(g.sdi || '').trim();
+      if (!desc && !legacySdi && Object.keys(g).length === 0) return null;
+      return buildGoalShell({
+        goal_id: g.goal_id || g.id || null,
+        description: desc,
+        domain: g.domain || g.area || 'literacy',
+        sdi: { strategy: legacySdi, evidence_base: '', delivery_model: '', frequency: '' },
+        progress_monitoring: {
+          metric: 'accuracy', unit: 'percent', baseline: null,
+          target: g.target != null ? parseFloat(g.target) || null : null,
+          mastery_criterion: g.criteria || g.mastery_criterion || ''
+        }
+      });
+    }
+    return null;
+  }
+
+  function parseGoals(raw) {
+    if (!raw && raw !== 0) return [];
+    if (Array.isArray(raw)) return raw.map(normaliseGoalObj).filter(Boolean);
+    var s = String(raw).trim();
+    if (!s || s === '[]') return [];
+    if (s.charAt(0) === '[') {
+      try {
+        var parsed = JSON.parse(s);
+        return Array.isArray(parsed) ? parsed.map(normaliseGoalObj).filter(Boolean) : [];
+      } catch (e) {}
+    }
+    return [buildGoalShell({ description: s })];
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     DATE FORMATTING — mirrors _toDisplayDate from modify-student.html
+  ══════════════════════════════════════════════════════════════ */
+  function toDateInputValue(raw) {
+    if (!raw) return '';
+    var d;
+    if (raw instanceof Date) { d = raw; }
+    else {
+      var s = String(raw).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
+      var parts = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (parts) return parts[3] + '-' + String(parts[1]).padStart(2,'0') + '-' + String(parts[2]).padStart(2,'0');
+      d = new Date(s);
+    }
+    if (isNaN(d.getTime())) return '';
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+  }
+
+  function toDisplayDate(raw) {
+    var ymd = toDateInputValue(raw);
+    if (!ymd) return '—';
+    return ymd.slice(5,7) + '/' + ymd.slice(8,10) + '/' + ymd.slice(0,4);
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     UI HELPERS
+  ══════════════════════════════════════════════════════════════ */
+  function showState(id) {
+    ['state-loading','state-error','state-main'].forEach(function(s) {
+      document.getElementById(s).classList.toggle('active', s === id);
+    });
+  }
+
+  var _toastTimer = null;
+  function showToast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show ' + (type || '');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function() { el.className = ''; }, 3200);
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     ROSTER LOAD
+  ══════════════════════════════════════════════════════════════ */
+  function loadRoster() {
+    showState('state-loading');
+    gasPost({ action: 'getRoster' })
+      .then(function(data) {
+        var allRows  = Array.isArray(data.rows) ? data.rows : [];
+        var dataRows = allRows.length > 1 ? allRows.slice(1) : []; // skip header
+
+        _roster = dataRows.filter(function(r) { return Array.isArray(r) && r[COL.ID]; });
+
+        if (!_roster.length) {
+          document.getElementById('error-message').textContent = 'No student records found in the database.';
+          showState('state-error');
+          return;
+        }
+
+        // Sort by last name then first name
+        _roster.sort(function(a, b) {
+          var la = String(a[COL.LAST_NAME]||'').toLowerCase();
+          var lb = String(b[COL.LAST_NAME]||'').toLowerCase();
+          if (la !== lb) return la < lb ? -1 : 1;
+          return String(a[COL.FIRST_NAME]||'').toLowerCase() < String(b[COL.FIRST_NAME]||'').toLowerCase() ? -1 : 1;
+        });
+
+        // Populate selector
+        var sel = document.getElementById('student-select');
+        _roster.forEach(function(row) {
+          var opt = document.createElement('option');
+          opt.value = String(row[COL.ID]);
+          opt.textContent = String(row[COL.LAST_NAME]||'') + ', ' + String(row[COL.FIRST_NAME]||'') + '  [' + String(row[COL.ID]) + ']';
+          sel.appendChild(opt);
+        });
+
+        showState('state-main');
+      })
+      .catch(function(err) {
+        document.getElementById('error-message').textContent = 'Could not connect to the database: ' + (err.message || 'unknown error');
+        showState('state-error');
+      });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     STUDENT SELECTION
+  ══════════════════════════════════════════════════════════════ */
+  document.getElementById('student-select').addEventListener('change', function() {
+    var id = this.value;
+    if (!id) {
+      document.getElementById('student-info').classList.remove('visible');
+      document.getElementById('session-section').style.display = 'none';
+      document.getElementById('btn-submit').disabled = true;
+      _student = null; _goals = [];
+      return;
+    }
+
+    var row = _roster.find(function(r) { return String(r[COL.ID]) === id; });
+    if (!row) return;
+
+    _student = row;
+    _goals   = parseGoals(row[COL.GOALS]);
+
+    // Populate meta strip
+    document.getElementById('meta-id').textContent          = String(row[COL.ID]);
+    document.getElementById('meta-disability').textContent  = String(row[COL.DISABILITY]||'—');
+    document.getElementById('meta-iep-end').textContent     = toDisplayDate(row[COL.IEP_END]);
+    document.getElementById('meta-goal-count').textContent  = _goals.length + ' goal' + (_goals.length !== 1 ? 's' : '');
+    document.getElementById('student-info').classList.add('visible');
+
+    // Set today's date as default
+    var today = new Date();
+    var ymd = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    document.getElementById('session-date').value = ymd;
+
+    renderGoalCards();
+
+    document.getElementById('session-section').style.display = 'block';
+    document.getElementById('btn-submit').disabled = (_goals.length === 0);
+    document.getElementById('submit-status').textContent = '';
+    document.getElementById('submit-status').className = '';
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     RENDER GOAL CARDS
+  ══════════════════════════════════════════════════════════════ */
+  function renderGoalCards() {
+    var container = document.getElementById('goal-list');
+    container.innerHTML = '';
+
+    if (!_goals.length) {
+      var empty = document.createElement('p');
+      empty.className = 'empty-state';
+      empty.textContent = 'No goals recorded for this student.';
+      container.appendChild(empty);
+      return;
+    }
+
+    _goals.forEach(function(g, idx) {
+      var pm   = g.progress_monitoring || {};
+      var sdi  = g.sdi || {};
+      var card = document.createElement('div');
+      card.className = 'goal-tracker-card';
+      card.setAttribute('data-goal-index', idx);
+
+      // ── Goal number badge
+      var badge = document.createElement('div');
+      badge.className = 'goal-num-badge';
+      badge.textContent = 'Goal ' + (idx + 1) + (g.goal_id ? '  ·  ' + g.goal_id : '');
+      card.appendChild(badge);
+
+      // ── Description
+      var descP = document.createElement('p');
+      descP.className = 'goal-description';
+      descP.textContent = g.description || '(no description)';
+      card.appendChild(descP);
+
+      // ── SDI
+      if (sdi.strategy) {
+        var sdiP = document.createElement('p');
+        sdiP.className = 'goal-sdi';
+        var sdiLbl = document.createElement('span');
+        sdiLbl.className = 'goal-sdi-label';
+        sdiLbl.textContent = 'SDI: ';
+        sdiP.appendChild(sdiLbl);
+        sdiP.appendChild(document.createTextNode(sdi.strategy));
+        card.appendChild(sdiP);
+      }
+
+      // ── Meta chips (method, target, mastery)
+      var metaRow = document.createElement('div');
+      metaRow.className = 'goal-meta-row';
+      if (pm.method_of_measurement) {
+        var mc = document.createElement('span');
+        mc.className = 'goal-meta-chip';
+        mc.textContent = pm.method_of_measurement;
+        metaRow.appendChild(mc);
+      }
+      if (pm.target != null) {
+        var tc = document.createElement('span');
+        tc.className = 'goal-meta-chip target';
+        tc.textContent = 'Target: ' + pm.target + '%';
+        metaRow.appendChild(tc);
+      }
+      if (pm.mastery_criterion) {
+        var mcc = document.createElement('span');
+        mcc.className = 'goal-meta-chip';
+        mcc.textContent = pm.mastery_criterion;
+        metaRow.appendChild(mcc);
+      }
+      if (metaRow.children.length) card.appendChild(metaRow);
+
+      // ── Divider
+      var hr = document.createElement('hr');
+      hr.className = 'goal-divider';
+      card.appendChild(hr);
+
+      // ── Log grid: Result + Accuracy | Notes
+      var grid = document.createElement('div');
+      grid.className = 'goal-log-grid';
+
+      // Left col — Result dropdown + Accuracy
+      var leftCol = document.createElement('div');
+      leftCol.style.cssText = 'display:flex;flex-direction:column;gap:0.5rem;';
+
+      var resLbl = document.createElement('label');
+      resLbl.className = 'field-label';
+      resLbl.textContent = 'Result';
+      var resSel = document.createElement('select');
+      resSel.className = 'field-select goal-result-select';
+      [
+        { value: '', label: '— Select —' },
+        { value: 'met',           label: '✓  Met criterion' },
+        { value: 'approaching',   label: '↑  Approaching' },
+        { value: 'not-met',       label: '✗  Did not meet' },
+        { value: 'not-attempted', label: '—  Not attempted' },
+      ].forEach(function(opt) {
+        var o = document.createElement('option');
+        o.value = opt.value; o.textContent = opt.label;
+        resSel.appendChild(o);
+      });
+      leftCol.appendChild(resLbl);
+      leftCol.appendChild(resSel);
+
+      var accLbl = document.createElement('label');
+      accLbl.className = 'field-label';
+      accLbl.textContent = 'Accuracy (%)';
+      var accInput = document.createElement('input');
+      accInput.type = 'number';
+      accInput.className = 'field-input goal-accuracy-input';
+      accInput.placeholder = 'e.g. 75';
+      accInput.min = '0';
+      accInput.max = '100';
+      leftCol.appendChild(accLbl);
+      leftCol.appendChild(accInput);
+
+      grid.appendChild(leftCol);
+
+      // Right col — Notes
+      var rightCol = document.createElement('div');
+      rightCol.style.cssText = 'display:flex;flex-direction:column;gap:0.3rem;';
+      var notesLbl = document.createElement('label');
+      notesLbl.className = 'field-label';
+      notesLbl.textContent = 'Session Notes';
+      var notesTA = document.createElement('textarea');
+      notesTA.className = 'field-textarea goal-notes-input';
+      notesTA.placeholder = 'Observations, prompting level, errors, context…';
+      notesTA.style.minHeight = '96px';
+      rightCol.appendChild(notesLbl);
+      rightCol.appendChild(notesTA);
+      grid.appendChild(rightCol);
+
+      card.appendChild(grid);
+      container.appendChild(card);
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     SUBMIT SESSION
+
+     Payload shape sent to GAS action:'logGoalData':
+     {
+       action      : 'logGoalData',
+       submittedAt : ISO timestamp,
+       studentId   : string,
+       studentTag  : string,      ← FERPA-safe join key
+       sessionDate : 'YYYY-MM-DD',
+       setting     : string,
+       entries: [
+         {
+           submittedAt : ISO timestamp,
+           studentId   : string,
+           studentTag  : string,
+           sessionDate : 'YYYY-MM-DD',
+           setting     : string,
+           goal_id     : string,
+           goalIndex   : number,   ← 0-based position in goals array
+           result      : string,   ← 'met' | 'approaching' | 'not-met' | 'not-attempted' | ''
+           accuracy    : number|null,
+           notes       : string,
+         },
+         …
+       ]
+     }
+  ══════════════════════════════════════════════════════════════ */
+  document.getElementById('btn-submit').addEventListener('click', function() {
+    if (!_student || !_goals.length) return;
+
+    var submitBtn   = this;
+    var statusEl    = document.getElementById('submit-status');
+    var sessionDate = document.getElementById('session-date').value;
+    var setting     = document.getElementById('session-setting').value;
+    var now         = new Date().toISOString();
+    var studentId   = String(_student[COL.ID]);
+    var studentTag  = String(_student[COL.TAG] || '');
+
+    if (!sessionDate) {
+      statusEl.textContent = 'Please select a session date.';
+      statusEl.className   = 'err';
+      return;
+    }
+
+    // Collect one entry per goal card
+    var cards   = document.querySelectorAll('.goal-tracker-card');
+    var entries = [];
+
+    cards.forEach(function(card) {
+      var idx      = parseInt(card.getAttribute('data-goal-index'), 10);
+      var g        = _goals[idx];
+      if (!g) return;
+
+      var result   = (card.querySelector('.goal-result-select')   || {}).value || '';
+      var accRaw   = (card.querySelector('.goal-accuracy-input')  || {}).value || '';
+      var notes    = (card.querySelector('.goal-notes-input')     || {}).value || '';
+
+      entries.push({
+        submittedAt : now,
+        studentId   : studentId,
+        studentTag  : studentTag,
+        sessionDate : sessionDate,
+        setting     : setting,
+        goal_id     : g.goal_id || ('LOCAL-idx-' + idx),
+        goalIndex   : idx,
+        result      : result,
+        accuracy    : accRaw !== '' ? (parseFloat(accRaw) || null) : null,
+        notes       : notes.trim(),
+      });
+    });
+
+    if (!entries.length) {
+      statusEl.textContent = 'No goal data to submit.';
+      statusEl.className   = 'err';
+      return;
+    }
+
+    submitBtn.disabled       = true;
+    submitBtn.textContent    = 'Submitting…';
+    statusEl.textContent     = '';
+    statusEl.className       = '';
+
+    var payload = {
+      action      : 'logGoalData',
+      submittedAt : now,
+      studentId   : studentId,
+      studentTag  : studentTag,
+      sessionDate : sessionDate,
+      setting     : setting,
+      entries     : entries,
+    };
+
+    gasPost(payload)
+      .then(function(data) {
+        if (data.result !== 'success') throw new Error(data.error || 'GAS returned an error');
+        showToast('Session logged — ' + entries.length + ' goal' + (entries.length !== 1 ? 's' : '') + ' recorded.', 'success');
+        statusEl.textContent = '✓ Submitted ' + entries.length + ' entries at ' + new Date().toLocaleTimeString();
+        statusEl.className   = 'ok';
+        // Reset all log inputs for the next session
+        document.querySelectorAll('.goal-result-select, .goal-accuracy-input, .goal-notes-input').forEach(function(el) {
+          el.value = '';
+        });
+      })
+      .catch(function(err) {
+        console.error('[submitSession]', err);
+        statusEl.textContent = 'Submit failed: ' + (err.message || 'unknown error');
+        statusEl.className   = 'err';
+        showToast('Submit failed — check console for details.', 'error');
+      })
+      .finally(function() {
+        submitBtn.disabled    = false;
+        submitBtn.textContent = 'Submit Session';
+      });
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     BOOT
+  ══════════════════════════════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', loadRoster);
+  </script>
+</body>
+</html>

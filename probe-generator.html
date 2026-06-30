@@ -255,6 +255,42 @@
 
     /* Hide print zone on screen */
     #print-zone { display: none; }
+
+    /* ── Score Administration panel ── */
+    #score-panel { display: none; }
+    #score-panel.visible { display: block; }
+    .score-student-meta {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      margin: 0.75rem 0 1rem; padding: 0.65rem 0.85rem;
+      background: #0f1117; border: 1px solid #1e2335; border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: #7d8fb3;
+    }
+    .score-student-meta .chip { display: inline-flex; gap: 0.3rem; }
+    .score-student-meta .chip-label { color: #4a5578; }
+    .score-input-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; margin-bottom: 1rem; }
+    @media (max-width: 600px) { .score-input-grid { grid-template-columns: 1fr; } }
+    .score-computed-row {
+      display: flex; gap: 0.75rem; margin-bottom: 1rem;
+    }
+    .score-computed-chip {
+      flex: 1; background: rgba(108,143,255,0.06); border: 1px solid rgba(108,143,255,0.2);
+      border-radius: 8px; padding: 0.6rem 0.85rem;
+    }
+    .score-computed-chip .scc-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase; color: #4a5578; display: block; margin-bottom: 0.2rem;
+    }
+    .score-computed-chip .scc-value {
+      font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: 700; color: #6c8fff;
+    }
+    .score-submit-status {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; min-height: 1.2rem; margin-top: 0.6rem;
+    }
+    .score-submit-status.ok  { color: #34d399; }
+    .score-submit-status.err { color: #f87171; }
+    .raw-data-note {
+      font-size: 0.68rem; color: #4a5578; line-height: 1.5; margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body>
@@ -287,7 +323,7 @@
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
           FERPA
         </span>
-        No student data is used or transmitted. Probe generation is based solely on curriculum parameters you define.
+        Probe text is generated from curriculum parameters only — no student data is used or transmitted at that step. Administration scores are submitted only when you choose to record them below, using the same FERPA-safe student tag as the rest of the system.
       </div>
 
       <!-- ═══════════════════════════════════
@@ -475,6 +511,73 @@
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════
+           PANEL 5 — SCORE ADMINISTRATION
+      ═══════════════════════════════════ -->
+      <div class="panel" id="score-panel">
+        <p class="panel-title">Score This Administration</p>
+        <p class="field-hint" style="margin-top:-0.4rem;margin-bottom:0.9rem;">
+          After administering this probe to a student, record the raw results here. This writes directly to the
+          same goal-tracking database used by the Batch Tracker — accuracy and WCPM are stored as-is, with no
+          automatic pass/fail judgment applied.
+        </p>
+
+        <label class="field-label" for="score-student-select">Student</label>
+        <select id="score-student-select" class="field-select">
+          <option value="">— Select a student —</option>
+        </select>
+
+        <div id="score-student-meta" class="score-student-meta" style="display:none;"></div>
+
+        <div id="score-goal-wrap" style="display:none;margin-top:0.9rem;">
+          <label class="field-label" for="score-goal-select">Goal</label>
+          <select id="score-goal-select" class="field-select"></select>
+        </div>
+
+        <div id="score-fields-wrap" style="display:none;margin-top:1.1rem;">
+          <div class="score-input-grid">
+            <div>
+              <label class="field-label" for="score-words-read">Words Read</label>
+              <input type="number" id="score-words-read" class="field-input" min="0" placeholder="e.g. 142" />
+            </div>
+            <div>
+              <label class="field-label" for="score-errors">Errors</label>
+              <input type="number" id="score-errors" class="field-input" min="0" placeholder="e.g. 4" />
+            </div>
+            <div>
+              <label class="field-label" for="score-time">Time (seconds)</label>
+              <input type="number" id="score-time" class="field-input" min="1" value="60" />
+            </div>
+          </div>
+
+          <div class="score-computed-row">
+            <div class="score-computed-chip">
+              <span class="scc-label">WCPM</span>
+              <span class="scc-value" id="score-wcpm-out">—</span>
+            </div>
+            <div class="score-computed-chip">
+              <span class="scc-label">Accuracy</span>
+              <span class="scc-value" id="score-accuracy-out">—</span>
+            </div>
+          </div>
+
+          <label class="field-label" for="score-date">Date Administered</label>
+          <input type="date" id="score-date" class="field-input" style="margin-bottom:0.9rem;" />
+
+          <label class="field-label" for="score-notes">Notes <span style="font-weight:400;text-transform:none;font-size:0.62rem;color:#252c42;">(optional)</span></label>
+          <textarea id="score-notes" class="field-textarea" style="min-height:70px;" placeholder="Observations, prompting level, error patterns…"></textarea>
+
+          <div class="btn-row">
+            <button id="btn-score-submit" class="btn-green" onclick="submitProbeScore()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              Submit Score
+            </button>
+            <span class="score-submit-status" id="score-submit-status"></span>
+          </div>
+          <p class="raw-data-note">Result is left blank for probe entries — accuracy and WCPM are recorded as raw data points. Trend analysis against this goal's mastery criterion happens later, in reporting.</p>
+        </div>
+      </div>
+
     </div><!-- /page-wrap -->
   </main>
 
@@ -488,6 +591,7 @@
      STATE
   ══════════════════════════════════════════════════════════════ */
   var _activeText = '';   // the text that will be formatted into the probe
+  var _activeProbeId = ''; // generated once formatProbe() succeeds; stamped onto score submissions
 
   var GAS_URL = 'https://script.google.com/macros/s/AKfycbybVEYwsl68FUfUBlOM5aWJXgtbH38mjcjFns0QkY5Patls-QJiSOO3eazstDhOMfJg/exec';
 
@@ -654,6 +758,7 @@
   ══════════════════════════════════════════════════════════════ */
   function clearAll() {
     _activeText = '';
+    _activeProbeId = '';
     discardGenerated();
     document.getElementById('gen-status').className   = 'ai-status';
     document.getElementById('gen-status').textContent = '';
@@ -666,6 +771,15 @@
     document.getElementById('param-topic').value = '';
     document.getElementById('param-vocab').value = '';
     document.getElementById('param-grade-context').focus();
+
+    // Reset scoring panel
+    document.getElementById('score-panel').classList.remove('visible');
+    document.getElementById('score-student-select').value = '';
+    document.getElementById('score-student-meta').style.display = 'none';
+    document.getElementById('score-goal-wrap').style.display = 'none';
+    document.getElementById('score-fields-wrap').style.display = 'none';
+    document.getElementById('score-submit-status').textContent = '';
+    document.getElementById('score-submit-status').className = 'score-submit-status';
   }
 
   /* ══════════════════════════════════════════════════════════════
@@ -743,6 +857,10 @@
     var panel = document.getElementById('probe-output-panel');
     panel.classList.add('visible');
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    /* ── Stamp a probeId for this formatted probe and reveal scoring panel ── */
+    _activeProbeId = 'PROBE-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    document.getElementById('score-panel').classList.add('visible');
   }
 
   /* ══════════════════════════════════════════════════════════════
@@ -841,8 +959,339 @@
         '</div>' +
       '</div>';
 
+    /* ── Filename fix: the browser's Save-as-PDF dialog defaults its
+       filename to document.title, not to anything in this function's
+       print-zone HTML. Without this, every printed probe suggests the
+       static page title ("Reading Probe Generator — M-Powered Education")
+       regardless of what the teacher set in Probe Options. We build a
+       filename from the same title + grade used in the print header,
+       swap it in just before print, then restore the original page
+       title afterward so the tab itself isn't permanently renamed. ── */
+    var originalDocTitle = document.title;
+    var filenameSafe = (title + (grade ? ' Grade ' + grade : ''))
+      .replace(/[\\/:*?"<>|]/g, '')   // strip characters invalid in filenames
+      .replace(/\s+/g, ' ')
+      .trim() || 'Reading Probe';
+    document.title = filenameSafe;
+
     window.print();
+
+    // Restore shortly after, rather than immediately — window.print()
+    // blocks in most browsers until the dialog closes, but that's not
+    // guaranteed everywhere, so a short delay avoids a race where the
+    // title reverts before the OS dialog reads it.
+    setTimeout(function() {
+      document.title = originalDocTitle;
+    }, 1000);
   }
+
+  /* ══════════════════════════════════════════════════════════════
+     SCORE ADMINISTRATION
+     ──────────────────────────────────────────────────────────────
+     Mirrors tracker.html's COL schema, goal parsing, and gasPost
+     pattern exactly, so a probe-administered score lands in the
+     same GoalData sheet via the same logGoalData action.
+
+     Per the locked contract:
+       source   : 'probe'
+       probeId  : _activeProbeId (stamped when formatProbe() ran)
+       result   : left blank — raw accuracy/WCPM stand alone,
+                  no auto pass/fail judgment against goal targets
+  ══════════════════════════════════════════════════════════════ */
+
+  /* ── COL indices — must stay in sync with Code.gs / tracker.html ── */
+  var SCORE_COL = {
+    TIMESTAMP: 0, ID: 1, TAG: 2, FIRST_NAME: 3, LAST_NAME: 4,
+    IEP_START: 5, IEP_END: 6, DISABILITY: 7, SUPPLEMENTAL: 8,
+    GOALS: 9, ACCOMMODATIONS: 10
+  };
+
+  var _scoreRoster  = [];
+  var _scoreStudent = null;
+  var _scoreGoals   = [];
+
+  function scoreGasPost(payload) {
+    return fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.json(); });
+  }
+
+  /* ── Goal parsing — mirrors tracker.html's buildGoalShell / normaliseGoalObj / parseGoals ── */
+  function scoreBuildGoalShell(src) {
+    src = src || {};
+    var pmSrc = (src.progress_monitoring && typeof src.progress_monitoring === 'object') ? src.progress_monitoring : {};
+    return {
+      goal_id: src.goal_id || null,
+      description: String(src.description || '').trim(),
+      domain: String(src.domain || 'literacy'),
+      progress_monitoring: {
+        metric: String(pmSrc.metric || 'accuracy'),
+        unit: String(pmSrc.unit || 'percent'),
+        baseline: (pmSrc.baseline != null) ? parseFloat(pmSrc.baseline) || null : null,
+        target: (pmSrc.target != null) ? parseFloat(pmSrc.target) || null : null,
+        mastery_criterion: String(pmSrc.mastery_criterion || '')
+      }
+    };
+  }
+
+  function scoreNormaliseGoalObj(g) {
+    if (g === null || g === undefined) return null;
+    if (typeof g === 'string') {
+      var t = g.trim();
+      if (!t) return null;
+      if (t.charAt(0) === '{') { try { return scoreNormaliseGoalObj(JSON.parse(t)); } catch (e) {} }
+      return scoreBuildGoalShell({ description: t });
+    }
+    if (Array.isArray(g)) return null;
+    if (typeof g === 'object') {
+      if (g.progress_monitoring && typeof g.progress_monitoring === 'object') return scoreBuildGoalShell(g);
+      var desc = String(g.description || g.text || g.label || '').trim();
+      if (!desc && Object.keys(g).length === 0) return null;
+      return scoreBuildGoalShell({
+        goal_id: g.goal_id || g.id || null,
+        description: desc,
+        domain: g.domain || g.area || 'literacy',
+        progress_monitoring: {
+          target: g.target != null ? parseFloat(g.target) || null : null,
+          mastery_criterion: g.criteria || g.mastery_criterion || ''
+        }
+      });
+    }
+    return null;
+  }
+
+  function scoreParseGoals(raw) {
+    if (!raw && raw !== 0) return [];
+    if (Array.isArray(raw)) return raw.map(scoreNormaliseGoalObj).filter(Boolean);
+    var s = String(raw).trim();
+    if (!s || s === '[]') return [];
+    if (s.charAt(0) === '[') {
+      try {
+        var parsed = JSON.parse(s);
+        return Array.isArray(parsed) ? parsed.map(scoreNormaliseGoalObj).filter(Boolean) : [];
+      } catch (e) {}
+    }
+    return [scoreBuildGoalShell({ description: s })];
+  }
+
+  /* ── Roster load — populates the score-time student picker ── */
+  function loadScoreRoster() {
+    scoreGasPost({ action: 'getRoster' })
+      .then(function(data) {
+        var allRows  = Array.isArray(data.rows) ? data.rows : [];
+        var dataRows = allRows.length > 1 ? allRows.slice(1) : [];
+        _scoreRoster = dataRows.filter(function(r) { return Array.isArray(r) && r[SCORE_COL.ID]; });
+
+        _scoreRoster.sort(function(a, b) {
+          var la = String(a[SCORE_COL.LAST_NAME] || '').toLowerCase();
+          var lb = String(b[SCORE_COL.LAST_NAME] || '').toLowerCase();
+          if (la !== lb) return la < lb ? -1 : 1;
+          return String(a[SCORE_COL.FIRST_NAME] || '').toLowerCase() < String(b[SCORE_COL.FIRST_NAME] || '').toLowerCase() ? -1 : 1;
+        });
+
+        var sel = document.getElementById('score-student-select');
+        _scoreRoster.forEach(function(row) {
+          var opt = document.createElement('option');
+          opt.value = String(row[SCORE_COL.ID]);
+          opt.textContent = String(row[SCORE_COL.LAST_NAME] || '') + ', ' + String(row[SCORE_COL.FIRST_NAME] || '') + '  [' + String(row[SCORE_COL.ID]) + ']';
+          sel.appendChild(opt);
+        });
+      })
+      .catch(function(err) {
+        console.error('[loadScoreRoster]', err);
+      });
+  }
+
+  document.getElementById('score-student-select').addEventListener('change', function() {
+    var id = this.value;
+    var metaEl = document.getElementById('score-student-meta');
+    var goalWrap = document.getElementById('score-goal-wrap');
+    var fieldsWrap = document.getElementById('score-fields-wrap');
+
+    if (!id) {
+      _scoreStudent = null; _scoreGoals = [];
+      metaEl.style.display = 'none';
+      goalWrap.style.display = 'none';
+      fieldsWrap.style.display = 'none';
+      return;
+    }
+
+    var row = _scoreRoster.find(function(r) { return String(r[SCORE_COL.ID]) === id; });
+    if (!row) return;
+
+    _scoreStudent = row;
+    _scoreGoals   = scoreParseGoals(row[SCORE_COL.GOALS]);
+
+    metaEl.innerHTML =
+      '<span class="chip"><span class="chip-label">ID:</span> ' + esc(String(row[SCORE_COL.ID])) + '</span>' +
+      '<span class="chip"><span class="chip-label">Disability:</span> ' + esc(String(row[SCORE_COL.DISABILITY] || '—')) + '</span>' +
+      '<span class="chip"><span class="chip-label">Goals:</span> ' + _scoreGoals.length + '</span>';
+    metaEl.style.display = 'flex';
+
+    var goalSel = document.getElementById('score-goal-select');
+    goalSel.innerHTML = '';
+    if (!_scoreGoals.length) {
+      var noGoalOpt = document.createElement('option');
+      noGoalOpt.value = '';
+      noGoalOpt.textContent = 'No goals on file for this student';
+      goalSel.appendChild(noGoalOpt);
+      goalWrap.style.display = 'block';
+      fieldsWrap.style.display = 'none';
+      return;
+    }
+
+    _scoreGoals.forEach(function(g, idx) {
+      var opt = document.createElement('option');
+      opt.value = String(idx);
+      var label = (g.description || ('Goal ' + (idx + 1)));
+      if (label.length > 70) label = label.slice(0, 67) + '…';
+      opt.textContent = (g.goal_id ? '[' + g.goal_id + '] ' : '') + label;
+      goalSel.appendChild(opt);
+    });
+
+    goalWrap.style.display = 'block';
+    fieldsWrap.style.display = 'block';
+
+    // Default date to today
+    var today = new Date();
+    var ymd = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    document.getElementById('score-date').value = ymd;
+  });
+
+  /* ── Live WCPM / Accuracy calculation ── */
+  function recalcProbeScore() {
+    var wordsRead = parseFloat(document.getElementById('score-words-read').value);
+    var errors    = parseFloat(document.getElementById('score-errors').value);
+    var timeSec   = parseFloat(document.getElementById('score-time').value);
+
+    var wcpmOut = document.getElementById('score-wcpm-out');
+    var accOut  = document.getElementById('score-accuracy-out');
+
+    if (isNaN(wordsRead) || isNaN(timeSec) || timeSec <= 0) {
+      wcpmOut.textContent = '—';
+      accOut.textContent  = '—';
+      return;
+    }
+    var errs = isNaN(errors) ? 0 : errors;
+    var correctWords = Math.max(wordsRead - errs, 0);
+    var wcpm = Math.round((correctWords / timeSec) * 60);
+    var accuracy = wordsRead > 0 ? Math.round((correctWords / wordsRead) * 1000) / 10 : 0;
+
+    wcpmOut.textContent = wcpm;
+    accOut.textContent  = accuracy + '%';
+  }
+  ['score-words-read', 'score-errors', 'score-time'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', recalcProbeScore);
+  });
+
+  /* ── Submit — same logGoalData action used by Batch Tracker ── */
+  function submitProbeScore() {
+    var statusEl = document.getElementById('score-submit-status');
+    var submitBtn = document.getElementById('btn-score-submit');
+
+    if (!_scoreStudent) {
+      statusEl.textContent = 'Select a student first.';
+      statusEl.className = 'score-submit-status err';
+      return;
+    }
+    var goalSel = document.getElementById('score-goal-select');
+    var goalIdx = parseInt(goalSel.value, 10);
+    var goal = _scoreGoals[goalIdx];
+    if (!goal) {
+      statusEl.textContent = 'Select a goal first.';
+      statusEl.className = 'score-submit-status err';
+      return;
+    }
+
+    var wordsRead = parseFloat(document.getElementById('score-words-read').value);
+    var errors    = parseFloat(document.getElementById('score-errors').value);
+    var timeSec   = parseFloat(document.getElementById('score-time').value);
+    var sessionDate = document.getElementById('score-date').value;
+    var notes = document.getElementById('score-notes').value.trim();
+
+    if (isNaN(wordsRead) || wordsRead < 0) {
+      statusEl.textContent = 'Enter words read.';
+      statusEl.className = 'score-submit-status err';
+      return;
+    }
+    if (isNaN(timeSec) || timeSec <= 0) {
+      statusEl.textContent = 'Enter a valid time in seconds.';
+      statusEl.className = 'score-submit-status err';
+      return;
+    }
+    if (!sessionDate) {
+      statusEl.textContent = 'Select the date administered.';
+      statusEl.className = 'score-submit-status err';
+      return;
+    }
+
+    var errs = isNaN(errors) ? 0 : errors;
+    var correctWords = Math.max(wordsRead - errs, 0);
+    var wcpm = Math.round((correctWords / timeSec) * 60);
+    var accuracy = wordsRead > 0 ? Math.round((correctWords / wordsRead) * 1000) / 10 : 0;
+
+    var studentId  = String(_scoreStudent[SCORE_COL.ID]);
+    var studentTag = String(_scoreStudent[SCORE_COL.TAG] || '');
+    var now = new Date().toISOString();
+
+    var entry = {
+      submittedAt: now,
+      studentId:   studentId,
+      studentTag:  studentTag,
+      sessionDate: sessionDate,
+      setting:     '',
+      goal_id:     goal.goal_id || ('LOCAL-idx-' + goalIdx),
+      goalIndex:   goalIdx,
+      result:      '',              // intentionally blank — raw data point, no auto-judgment
+      accuracy:    accuracy,
+      notes:       notes,
+      source:      'probe',
+      probeId:     _activeProbeId || null,
+      wcpm:        wcpm
+    };
+
+    var payload = {
+      action: 'logGoalData',
+      submittedAt: now,
+      studentId: studentId,
+      studentTag: studentTag,
+      sessionDate: sessionDate,
+      setting: '',
+      entries: [entry]
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+    statusEl.textContent = '';
+    statusEl.className = 'score-submit-status';
+
+    scoreGasPost(payload)
+      .then(function(data) {
+        if (data.result !== 'success') throw new Error(data.error || 'GAS returned an error');
+        statusEl.textContent = '✓ Score recorded — WCPM ' + wcpm + ', Accuracy ' + accuracy + '%';
+        statusEl.className = 'score-submit-status ok';
+        document.getElementById('score-words-read').value = '';
+        document.getElementById('score-errors').value = '';
+        document.getElementById('score-time').value = '60';
+        document.getElementById('score-notes').value = '';
+        document.getElementById('score-wcpm-out').textContent = '—';
+        document.getElementById('score-accuracy-out').textContent = '—';
+      })
+      .catch(function(err) {
+        console.error('[submitProbeScore]', err);
+        statusEl.textContent = 'Submit failed: ' + (err.message || 'unknown error');
+        statusEl.className = 'score-submit-status err';
+      })
+      .finally(function() {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Score';
+      });
+  }
+
+  /* ── Boot: load roster for the score-time picker ── */
+  document.addEventListener('DOMContentLoaded', loadScoreRoster);
   </script>
 
 </body>

@@ -24,6 +24,19 @@
     .nav-link { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 600; color: #7d8fb3; text-decoration: none; padding: 0.35rem 0.8rem; border-radius: 6px; transition: color 0.13s, background 0.13s; }
     .nav-link:hover { color: #e8ecf4; background: rgba(255,255,255,0.05); }
     .nav-divider { width: 1px; height: 18px; background: #252c42; margin: 0 0.5rem; flex-shrink: 0; }
+    /* ── Unified nav additions ── */
+    .site-nav { overflow-x: auto; scrollbar-width: none; }
+    .site-nav::-webkit-scrollbar { display: none; }
+    .nav-link { flex-shrink: 0; }
+    .nav-link.active { color: #6c8fff; background: rgba(108,143,255,0.1); box-shadow: inset 0 0 0 1px rgba(108,143,255,0.35); }
+    .btn-ghost {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 600;
+      color: #7d8fb3; background: transparent; border: 1px solid #252c42; border-radius: 6px;
+      padding: 0.35rem 0.9rem; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: color 0.13s, border-color 0.13s, background 0.13s;
+    }
+    .btn-ghost:hover { color: #f87171; border-color: rgba(248,113,113,0.45); background: rgba(248,113,113,0.06); }
+    @media (max-width: 760px) { .site-brand-text { display: none; } }
 
     /* ── Page layout ── */
     .page-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
@@ -295,21 +308,55 @@
 </head>
 <body>
 
+  <!-- ════════════════════════════════════════════════════════════
+       M-POWERED UNIFIED NAVIGATION
+       Logo → dashboard home · subdomain switcher with active state
+       · Profile placeholder · universal Sign Out.
+  ════════════════════════════════════════════════════════════ -->
   <header class="site-header">
     <div class="site-header-inner">
-      <a href="https://caseload.mpowerededucation.com/" class="site-brand">
+      <!-- Logo acts as the Home / Dashboard link -->
+      <a href="https://www.mpowerededucation.com/dashboard.html" class="site-brand" title="M-Powered dashboard">
         <span class="site-logo-fallback">M</span>
-        M-Powered Education
+        <span class="site-brand-text">M-Powered Education</span>
       </a>
-      <nav class="site-nav">
-        <a href="index.html" class="nav-link">Data Tools</a>
+      <nav class="site-nav" aria-label="M-Powered workspaces">
+        <!-- Subdomain switcher — .active applied by unified-nav script -->
+        <a href="https://iep.mpowerededucation.com/"      class="nav-link" data-subdomain="iep">Goal Architect</a>
+        <a href="https://sdi.mpowerededucation.com/"      class="nav-link" data-subdomain="sdi">SDI Engine</a>
+        <a href="https://data.mpowerededucation.com/"     class="nav-link" data-subdomain="data">Data Utility</a>
+        <a href="https://caseload.mpowerededucation.com/" class="nav-link" data-subdomain="caseload">Caseload</a>
         <div class="nav-divider"></div>
-        <a href="https://www.mpowerededucation.com/dashboard.html" class="nav-link">Dashboard</a>
-        <div class="nav-divider"></div>
-        <a href="https://caseload.mpowerededucation.com/" class="nav-link">&larr; Caseload Manager</a>
+        <!-- User actions -->
+        <a href="#" class="nav-link" id="nav-profile" title="Profile — coming soon">Profile</a>
+        <button type="button" class="btn-ghost" onclick="logout()">Sign Out</button>
       </nav>
     </div>
   </header>
+
+  <script>
+    // ── Unified nav: active state + universal logout ──────────────
+    (function () {
+      'use strict';
+      var sub = window.location.hostname.split('.')[0];
+      var links = document.querySelectorAll('.site-nav .nav-link[data-subdomain]');
+      for (var i = 0; i < links.length; i++) {
+        if (links[i].getAttribute('data-subdomain') === sub) {
+          links[i].classList.add('active');
+          links[i].setAttribute('aria-current', 'page');
+        }
+      }
+    })();
+    function logout() {
+      // Universal sign-out: clear every client-side auth artifact,
+      // then land on the main dashboard (its guard takes over from
+      // there if re-authentication is required).
+      try { localStorage.clear(); }   catch (e) {}
+      try { sessionStorage.clear(); } catch (e) {}
+      document.cookie = 'mp_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.mpowerededucation.com; Secure; SameSite=Lax';
+      window.location.href = 'https://www.mpowerededucation.com/dashboard.html';
+    }
+  </script>
 
   <main>
     <div class="page-wrap">

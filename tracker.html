@@ -351,31 +351,74 @@
      dashboard.html, modify-student.html, and this file.
      Uses text/plain to avoid a preflight (matches caseload site).
   ══════════════════════════════════════════════════════════════ */
-  function gasPost(payload) {
-    payload = payload || {};
-    payload.userEmail = sessionStorage.getItem('mp_beta_email') || '';
+  // ── Cross-subdomain session bootstrap ─────────────────────────
+  //  sessionStorage never crosses subdomains, so a teacher landing
+  //  here directly starts with an empty local session even though
+  //  they're really signed in. The login page mirrors the
+  //  authenticated email into a mp_session cookie scoped to
+  //  .mpowerededucation.com, which DOES cross subdomains — this
+  //  reads that cookie once per origin and re-derives role/
+  //  displayName fresh via authCheck (never trusts the cookie's
+  //  role, only its email; Code.gs's UserProfiles lookup is the
+  //  actual authority). Best-effort: any failure here just leaves
+  //  the session unhydrated, and the real call that follows falls
+  //  through to its normal 401 handling exactly as before.
+  function _getMpSessionCookie() {
+    var m = document.cookie.match(/(?:^|;\s*)mp_session=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function _bootstrapSession() {
+    if (sessionStorage.getItem('mp_beta_email')) return Promise.resolve();
+    var cookieEmail = _getMpSessionCookie();
+    if (!cookieEmail) return Promise.resolve();
 
     return fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ action: 'authCheck', userEmail: cookieEmail })
     })
     .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function (d) {
-      // 401 — no/unrecognized identity: stop and force a real
-      // re-authentication at the login gateway.
-      if (d && d.code === 401) {
-        _clearBetaSession();
-        window.location.href = 'https://www.mpowerededucation.com/index.html?error=unauthorized';
-        return new Promise(function () {}); // halt — navigation is underway
+      if (d && d.authorized) {
+        sessionStorage.setItem('mp_beta_email', cookieEmail);
+        sessionStorage.setItem('mp_beta_role', d.role || '');
+        sessionStorage.setItem('mp_beta_display_name', d.displayName || '');
+        sessionStorage.setItem('mp_beta_auth_time', Date.now().toString());
+      } else {
+        document.cookie = 'mp_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.mpowerededucation.com; Secure; SameSite=Lax';
       }
-      // 403 — recognized but not an enrolled beta role.
-      if (d && d.code === 403) {
-        _clearBetaSession();
-        alert('Access Denied: Your account is not enrolled in the closed beta.');
-        throw new Error('Access denied — not enrolled in the closed beta.');
-      }
-      return d;
+    })
+    .catch(function () { /* best-effort — the real call's own 401 handling takes over */ });
+  }
+
+  function gasPost(payload) {
+    payload = payload || {};
+
+    return _bootstrapSession().then(function () {
+      payload.userEmail = sessionStorage.getItem('mp_beta_email') || '';
+
+      return fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        // 401 — no/unrecognized identity: stop and force a real
+        // re-authentication at the login gateway.
+        if (d && d.code === 401) {
+          _clearBetaSession();
+          window.location.href = 'https://www.mpowerededucation.com/index.html?error=unauthorized';
+          return new Promise(function () {}); // halt — navigation is underway
+        }
+        // 403 — recognized but not an enrolled beta role.
+        if (d && d.code === 403) {
+          _clearBetaSession();
+          alert('Access Denied: Your account is not enrolled in the closed beta.');
+          throw new Error('Access denied — not enrolled in the closed beta.');
+        }
+        return d;
+      });
     });
   }
 

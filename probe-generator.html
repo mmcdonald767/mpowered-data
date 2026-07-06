@@ -640,7 +640,60 @@
   var _activeText = '';   // the text that will be formatted into the probe
   var _activeProbeId = ''; // generated once formatProbe() succeeds; stamped onto score submissions
 
-  var GAS_URL = 'https://script.google.com/macros/s/AKfycbybVEYwsl68FUfUBlOM5aWJXgtbH38mjcjFns0QkY5Patls-QJiSOO3eazstDhOMfJg/exec';
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbz4YTW46DN8u3bbvc_6n4PpzswBBCBdmoIfa_mXEPLhTly-1EDlHWPiQqpfBLQIdXic/exec';
+
+  /* ══════════════════════════════════════════════════════════════
+     GAS POST helper — beta-gated, single wrapper for this file
+     Every payload is stamped with the signed-in teacher's email so
+     Code.gs's beta gate can authorize the request. Responses
+     carrying code 401 (no/unrecognized identity) or 403 (not
+     enrolled) are intercepted here — identical contract across
+     dashboard.html, modify-student.html, tracker.html, and this
+     file. Both the probe-generation call and the scoring roster
+     calls below now go through this one function (previously two
+     separate, un-gated patterns).
+  ══════════════════════════════════════════════════════════════ */
+  function gasPost(payload) {
+    payload = payload || {};
+    payload.userEmail = sessionStorage.getItem('mp_beta_email') || '';
+
+    return fetch(GAS_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(d) {
+      // 401 — no/unrecognized identity: stop and force a real
+      // re-authentication at the login gateway.
+      if (d && d.code === 401) {
+        _clearBetaSession();
+        window.location.href = 'https://www.mpowerededucation.com/index.html?error=unauthorized';
+        return new Promise(function () {}); // halt — navigation is underway
+      }
+      // 403 — recognized but not an enrolled beta role.
+      if (d && d.code === 403) {
+        _clearBetaSession();
+        alert('Access Denied: Your account is not enrolled in the closed beta.');
+        throw new Error('Access denied — not enrolled in the closed beta.');
+      }
+      return d;
+    });
+  }
+
+  // ── Beta-session cleanup ─────────────────────────────────────
+  //  Called on 401/403 so a rejected auth session never lingers —
+  //  the user is forced through a real re-authentication rather
+  //  than silently retrying with the same stale identity.
+  function _clearBetaSession() {
+    try {
+      sessionStorage.removeItem('oauth_token');
+      sessionStorage.removeItem('mp_beta_email');
+      sessionStorage.removeItem('mp_beta_role');
+      sessionStorage.removeItem('mp_beta_display_name');
+      sessionStorage.removeItem('mp_beta_auth_time');
+    } catch (e) {}
+  }
 
   /* ══════════════════════════════════════════════════════════════
      UTILITIES
@@ -701,18 +754,13 @@
     countBadge.textContent = '0 words';
     countBadge.className   = 'review-word-count';
 
-    fetch(GAS_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action:       'generateProbe',
-        gradeContext: gradeContext,
-        readingLevel: readingLevel,
-        topic:        topic,
-        vocab:        vocab
-      })
+    gasPost({
+      action:       'generateProbe',
+      gradeContext: gradeContext,
+      readingLevel: readingLevel,
+      topic:        topic,
+      vocab:        vocab
     })
-    .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.result !== 'success') throw new Error(data.error || 'GAS error');
       var content = (data.text || '').trim();
@@ -1057,13 +1105,10 @@
   var _scoreStudent = null;
   var _scoreGoals   = [];
 
-  function scoreGasPost(payload) {
-    return fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    }).then(function(r) { return r.json(); });
-  }
+  // scoreGasPost removed — the top-level gasPost() wrapper defined
+  // above (right after GAS_URL) now covers both the probe-generation
+  // and scoring call sites, so there's a single gated network path
+  // for this whole file instead of two.
 
   /* ── Goal parsing — mirrors tracker.html's buildGoalShell / normaliseGoalObj / parseGoals ── */
   function scoreBuildGoalShell(src) {
@@ -1125,7 +1170,7 @@
 
   /* ── Roster load — populates the score-time student picker ── */
   function loadScoreRoster() {
-    scoreGasPost({ action: 'getRoster' })
+    gasPost({ action: 'getRoster' })
       .then(function(data) {
         var allRows  = Array.isArray(data.rows) ? data.rows : [];
         var dataRows = allRows.length > 1 ? allRows.slice(1) : [];
@@ -1314,7 +1359,7 @@
     statusEl.textContent = '';
     statusEl.className = 'score-submit-status';
 
-    scoreGasPost(payload)
+    gasPost(payload)
       .then(function(data) {
         if (data.result !== 'success') throw new Error(data.error || 'GAS returned an error');
         statusEl.textContent = '✓ Score recorded — WCPM ' + wcpm + ', Accuracy ' + accuracy + '%';

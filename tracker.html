@@ -143,6 +143,50 @@
     #submit-status.ok  { color: #34d399; }
     #submit-status.err { color: #f87171; }
 
+    /* ── Post-Submit Modal (shared modal pattern from index.html) ── */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(3,7,18,0.75); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
+    }
+    .modal-backdrop.open { opacity: 1; visibility: visible; }
+    .modal-panel {
+      background: #171b26; border: 1px solid #1e2335; border-radius: 16px;
+      width: 90vw; max-width: 440px; display: flex; flex-direction: column;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+      transform: translateY(12px) scale(0.97); transition: transform 0.2s;
+      overflow: hidden;
+    }
+    .modal-backdrop.open .modal-panel { transform: translateY(0) scale(1); }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      padding: 1.15rem 1.5rem; border-bottom: 1px solid #1e2335;
+    }
+    .modal-title { font-size: 0.92rem; font-weight: 700; color: #e8ecf4; }
+    .modal-subtitle { font-family: 'JetBrains Mono', monospace; font-size: 0.64rem; color: #4a5578; margin-top: 0.15rem; }
+    .modal-body { padding: 1.25rem 1.5rem; }
+    .modal-body p { font-size: 0.84rem; color: #94a3b8; line-height: 1.65; margin-bottom: 0.5rem; }
+    .modal-actions {
+      display: flex; flex-direction: column; gap: 0.6rem;
+      padding: 0 1.5rem 1.5rem;
+    }
+    .modal-btn {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 600;
+      padding: 0.65rem 1rem; border-radius: 8px; cursor: pointer;
+      text-decoration: none; text-align: center;
+      transition: background 0.13s, border-color 0.13s;
+    }
+    .modal-btn-primary {
+      color: #34d399; background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.3);
+    }
+    .modal-btn-primary:hover { background: rgba(52,211,153,0.16); border-color: rgba(52,211,153,0.55); }
+    .modal-btn-secondary {
+      color: #7d8fb3; background: transparent; border: 1px solid #252c42;
+    }
+    .modal-btn-secondary:hover { color: #e8ecf4; border-color: #3e4a6d; }
+
     /* ── Empty / error states ── */
     .empty-state { font-size: 0.85rem; color: #4a5578; font-style: italic; padding: 1rem 0; }
     .error-box { background: rgba(248,113,113,0.06); border: 1px solid rgba(248,113,113,0.25); border-radius: 10px; padding: 1rem 1.25rem; color: #f87171; font-size: 0.85rem; line-height: 1.5; }
@@ -308,6 +352,31 @@
 
       </div><!-- /state-main -->
     </div>
+  <!-- ══════════════════════════════════════════════════════════
+       POST-SUBMISSION MODAL
+  ══════════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="post-submit-modal" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Session Logged</div>
+          <div class="modal-subtitle" id="post-submit-summary"></div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <p id="post-submit-detail">Your data has been recorded to the GoalData sheet.</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-primary" onclick="logAnother()">
+          ↻ &nbsp;Enter Another Data Point
+        </button>
+        <a href="https://data.mpowerededucation.com/" class="modal-btn modal-btn-secondary">
+          ← &nbsp;Return to Data Utility
+        </a>
+      </div>
+    </div>
+  </div>
+
   </main>
 
   <div id="toast" role="status" aria-live="polite"></div>
@@ -897,13 +966,19 @@
     gasPost(payload)
       .then(function(data) {
         if (data.result !== 'success') throw new Error(data.error || 'GAS returned an error');
-        showToast('Session logged — ' + entries.length + ' goal' + (entries.length !== 1 ? 's' : '') + ' recorded.', 'success');
-        statusEl.textContent = '✓ Submitted ' + entries.length + ' entries at ' + new Date().toLocaleTimeString();
+
+        // ── Show post-submission modal ──
+        var count = entries.length;
+        var studentName = String(_student[COL.FIRST] || '') + ' ' + String(_student[COL.LAST] || '');
+        document.getElementById('post-submit-summary').textContent =
+          count + ' goal' + (count !== 1 ? 's' : '') + ' recorded for ' + studentName.trim();
+        document.getElementById('post-submit-detail').textContent =
+          'Logged at ' + new Date().toLocaleTimeString() + ' on ' + sessionDate + '.';
+        document.getElementById('post-submit-modal').classList.add('open');
+        document.body.style.overflow = 'hidden';
+
+        statusEl.textContent = '✓ Submitted ' + count + ' entries at ' + new Date().toLocaleTimeString();
         statusEl.className   = 'ok';
-        // Reset all log inputs for the next session
-        document.querySelectorAll('.goal-result-select, .goal-accuracy-input, .goal-notes-input').forEach(function(el) {
-          el.value = '';
-        });
       })
       .catch(function(err) {
         console.error('[submitSession]', err);
@@ -915,6 +990,49 @@
         submitBtn.disabled    = false;
         submitBtn.textContent = 'Submit Session';
       });
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     POST-SUBMIT ACTIONS
+  ══════════════════════════════════════════════════════════════ */
+
+  /**
+   * logAnother() — clears entry fields (result, accuracy, notes) but
+   * preserves student context, session date, and setting so the
+   * teacher can rapid-fire log another session without re-selecting.
+   */
+  function logAnother() {
+    // Close modal
+    document.getElementById('post-submit-modal').classList.remove('open');
+    document.body.style.overflow = '';
+
+    // Clear per-goal entry fields only — keep student, date, and setting
+    document.querySelectorAll('.goal-result-select, .goal-accuracy-input, .goal-notes-input').forEach(function(el) {
+      if (el.tagName === 'SELECT') {
+        el.selectedIndex = 0;
+      } else {
+        el.value = '';
+      }
+    });
+
+    // Clear submission status
+    document.getElementById('submit-status').textContent = '';
+    document.getElementById('submit-status').className   = '';
+
+    // Scroll back to session details for quick entry
+    document.getElementById('session-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('post-submit-modal').addEventListener('click', function(e) {
+    if (e.target === this) logAnother();
+  });
+
+  // Close modal on Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('post-submit-modal').classList.contains('open')) {
+      logAnother();
+    }
   });
 
   /* ══════════════════════════════════════════════════════════════

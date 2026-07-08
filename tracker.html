@@ -61,6 +61,23 @@
     .field-input:focus, .field-select:focus, .field-textarea:focus {
       border-color: rgba(108,143,255,0.6); box-shadow: 0 0 0 3px rgba(108,143,255,0.12);
     }
+
+    /* ── Date picker: visible calendar icon + dark popover ──── */
+    input[type="date"].field-input { cursor: pointer; position: relative; }
+    input[type="date"].field-input::-webkit-calendar-picker-indicator {
+      filter: invert(0.55) sepia(0.6) saturate(3) hue-rotate(190deg);
+      cursor: pointer; opacity: 1;
+      padding: 4px; margin-left: 4px;
+      border-radius: 4px;
+      transition: background 0.13s;
+    }
+    input[type="date"].field-input::-webkit-calendar-picker-indicator:hover {
+      background: rgba(108,143,255,0.15);
+    }
+    /* Firefox: ensure native icon shows */
+    input[type="date"].field-input::-moz-calendar-picker-icon { opacity: 1; }
+    /* Color-scheme hint so the native date popup uses dark styling where supported */
+    input[type="date"].field-input { color-scheme: dark; }
     .field-select {
       appearance: none; -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a5578' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
@@ -633,6 +650,14 @@
     var today = new Date();
     var ymd = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
     document.getElementById('session-date').value = ymd;
+
+    // Click anywhere on the date field to open the calendar picker
+    var dateField = document.getElementById('session-date');
+    dateField.addEventListener('click', function () {
+      if (typeof this.showPicker === 'function') {
+        try { this.showPicker(); } catch (e) {}
+      }
+    });
 
     renderGoalCards();
 

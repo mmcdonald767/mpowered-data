@@ -673,21 +673,22 @@
   }
   function _bootstrapSession() {
     if (sessionStorage.getItem('mp_beta_email')) return Promise.resolve();
-    var cookieEmail = _getMpSessionCookie();
-    if (!cookieEmail) return Promise.resolve();
+    var cookieToken = _getMpSessionCookie();
+    if (!cookieToken) return Promise.resolve();
 
     return fetch(GAS_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'authCheck', userEmail: cookieEmail })
+      body: JSON.stringify({ action: 'authCheck', sessionToken: cookieToken })
     })
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) {
       if (d && d.authorized) {
-        sessionStorage.setItem('mp_beta_email', cookieEmail);
+        sessionStorage.setItem('mp_beta_email', d.email || '');
         sessionStorage.setItem('mp_beta_role', d.role || '');
         sessionStorage.setItem('mp_beta_display_name', d.displayName || '');
         sessionStorage.setItem('mp_beta_auth_time', Date.now().toString());
+        sessionStorage.setItem('mp_session_token', d.sessionToken || cookieToken);
       } else {
         document.cookie = 'mp_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.mpowerededucation.com; Secure; SameSite=Lax';
       }
@@ -699,7 +700,8 @@
     payload = payload || {};
 
     return _bootstrapSession().then(function () {
-      payload.userEmail = sessionStorage.getItem('mp_beta_email') || '';
+      payload.userEmail    = sessionStorage.getItem('mp_beta_email') || '';
+      payload.sessionToken = sessionStorage.getItem('mp_session_token') || '';
 
       return fetch(GAS_URL, {
         method:  'POST',
@@ -737,6 +739,7 @@
       sessionStorage.removeItem('mp_beta_role');
       sessionStorage.removeItem('mp_beta_display_name');
       sessionStorage.removeItem('mp_beta_auth_time');
+      sessionStorage.removeItem('mp_session_token');
     } catch (e) {}
   }
 

@@ -1325,7 +1325,14 @@
       opt.value = String(idx);
       var label = (g.description || ('Goal ' + (idx + 1)));
       if (label.length > 70) label = label.slice(0, 67) + '…';
-      opt.textContent = (g.goal_id ? '[' + g.goal_id + '] ' : '') + label;
+      // Only show the [goal_id] tag when it's a genuine, human-meaningful
+      // reference code (e.g. "CM-GOAL-XXXXX"). Goals created without one
+      // get an auto-generated internal placeholder like
+      // "LOCAL-msh28saa-heiywa" (see modify-student.html's goal_id
+      // fallback) — that's bookkeeping for the app, not something a
+      // teacher should ever see in a dropdown.
+      var showId = g.goal_id && !/^LOCAL-/.test(g.goal_id);
+      opt.textContent = (showId ? '[' + g.goal_id + '] ' : '') + label;
       goalSel.appendChild(opt);
     });
 

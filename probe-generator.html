@@ -264,6 +264,16 @@
       .print-notes-label { font-size: 7.5pt; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #555; margin-bottom: 0.5rem; }
       .print-notes-lines { display: flex; flex-direction: column; gap: 1.1rem; }
       .print-notes-line  { border-bottom: 1px solid #ccc; height: 0.1rem; }
+
+      /* ── Teacher scoring sheet: ALWAYS its own page, never sharing a
+         page with the student-facing passage. This is a deliberate
+         privacy/dignity boundary, not just layout — grade context,
+         target reading level, and topic must never appear on the same
+         printed page a student reads from, so a student (especially
+         an older one reading below grade level) never sees language
+         revealing that gap. Keep this section's only entry point as
+         the wrapper below; don't move metadata back above it. */
+      .teacher-scoring-sheet { page-break-before: always; break-before: page; }
     }
 
     /* Hide print zone on screen */
@@ -1060,45 +1070,73 @@
     ].filter(Boolean).join('  ·  ');
 
     document.getElementById('print-zone').innerHTML =
+      /* ── STUDENT-FACING PAGE — title and date ONLY. Deliberately no
+         grade context, target reading level, or topic here — those
+         reveal a below-grade-level placement to the student reading
+         this exact page, which we never want. All of that (plus the
+         fill-in fields and scoring table) lives on the teacher sheet
+         below, which is forced onto its own separate page. ── */
       '<div class="print-header">' +
         '<div class="print-header-left">' +
           '<h1>' + titleStr + '</h1>' +
-          '<p>M-Powered Education &nbsp;&middot;&nbsp; AI Generated Probe' +
-            (paramLine ? ' &nbsp;&middot;&nbsp; ' + esc(paramLine) : '') + '</p>' +
         '</div>' +
         '<div class="print-header-right">' +
-          'Date: <strong>' + todayStr() + '</strong><br>' +
-          'Total Words: <strong>' + totalWords + '</strong>' +
+          'Date: <strong>' + todayStr() + '</strong>' +
         '</div>' +
-      '</div>' +
-
-      '<div class="print-fillins">' +
-        '<div class="print-fillin-item"><span class="print-fillin-label">Student Name</span><div class="print-fillin-line"></div></div>' +
-        '<div class="print-fillin-item"><span class="print-fillin-label">Date Administered</span><div class="print-fillin-line"></div></div>' +
-        '<div class="print-fillin-item"><span class="print-fillin-label">Administered By</span><div class="print-fillin-line"></div></div>' +
       '</div>' +
 
       probeBodyHtml +
 
-      '<div class="print-word-count">Total words in passage: <strong>' + totalWords + '</strong></div>' +
+      /* ── TEACHER SCORING SHEET — always its own page (see the
+         .teacher-scoring-sheet page-break-before rule in the print
+         CSS). Everything that shouldn't be visible to the student —
+         grade context, reading level, topic, fill-in fields, the
+         scoring table, and observation notes — lives here instead. ── */
+      '<div class="teacher-scoring-sheet">' +
+        '<div class="print-header">' +
+          '<div class="print-header-left">' +
+            '<h1>' + titleStr + '</h1>' +
+            '<p>M-Powered Education &nbsp;&middot;&nbsp; AI Generated Probe' +
+              (paramLine ? ' &nbsp;&middot;&nbsp; ' + esc(paramLine) : '') + '</p>' +
+          '</div>' +
+          '<div class="print-header-right">' +
+            'Date: <strong>' + todayStr() + '</strong><br>' +
+            'Total Words: <strong>' + totalWords + '</strong>' +
+          '</div>' +
+        '</div>' +
 
-      '<div class="print-assessment">' +
-        '<div class="print-assessment-label">Scoring</div>' +
-        '<table class="print-table">' +
-          '<thead><tr>' +
-            '<th>Trial</th><th>Words Read (1 min)</th><th>Errors</th>' +
-            '<th>WCPM</th><th>Accuracy %</th><th>Notes</th>' +
-          '</tr></thead>' +
-          '<tbody>' + scoreRowsHtml + '</tbody>' +
-        '</table>' +
-      '</div>' +
+        '<div class="print-fillins">' +
+          '<div class="print-fillin-item"><span class="print-fillin-label">Student Name</span><div class="print-fillin-line"></div></div>' +
+          '<div class="print-fillin-item"><span class="print-fillin-label">Date Administered</span><div class="print-fillin-line"></div></div>' +
+          '<div class="print-fillin-item"><span class="print-fillin-label">Administered By</span><div class="print-fillin-line"></div></div>' +
+        '</div>' +
 
-      '<div class="print-notes">' +
-        '<div class="print-notes-label">Observation Notes</div>' +
-        '<div class="print-notes-lines">' +
-          '<div class="print-notes-line"></div>' +
-          '<div class="print-notes-line"></div>' +
-          '<div class="print-notes-line"></div>' +
+        /* Second copy of the passage — the examiner needs their own copy
+           to follow along and mark errors/omissions/self-corrections in
+           real time while the student reads aloud, not just a blank
+           summary table after the fact. */
+        probeBodyHtml +
+
+        '<div class="print-word-count">Total words in passage: <strong>' + totalWords + '</strong></div>' +
+
+        '<div class="print-assessment">' +
+          '<div class="print-assessment-label">Scoring</div>' +
+          '<table class="print-table">' +
+            '<thead><tr>' +
+              '<th>Trial</th><th>Words Read (1 min)</th><th>Errors</th>' +
+              '<th>WCPM</th><th>Accuracy %</th><th>Notes</th>' +
+            '</tr></thead>' +
+            '<tbody>' + scoreRowsHtml + '</tbody>' +
+          '</table>' +
+        '</div>' +
+
+        '<div class="print-notes">' +
+          '<div class="print-notes-label">Observation Notes</div>' +
+          '<div class="print-notes-lines">' +
+            '<div class="print-notes-line"></div>' +
+            '<div class="print-notes-line"></div>' +
+            '<div class="print-notes-line"></div>' +
+          '</div>' +
         '</div>' +
       '</div>';
 

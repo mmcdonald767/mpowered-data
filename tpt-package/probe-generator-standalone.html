@@ -99,10 +99,26 @@
     .ai-status.running { color: #6c8fff; }
     .ai-status.done    { color: #34d399; }
     .ai-status.error   { color: #f87171; }
-    .ai-spinner { width: 13px; height: 13px; border: 2px solid #252c42; border-top-color: #6c8fff; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .slow-notice { font-size: 0.68rem; color: #4a5578; margin-top: 0.4rem; display: none; }
-    .slow-notice.visible { display: block; }
+    /* ── M-branded spinner: rotating brand-gradient ring around the logo badge ── */
+    .ai-spinner { position: relative; width: 16px; height: 16px; flex-shrink: 0; }
+    .ai-spinner-ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0%, #6c8fff 16%, #3b5bdb 42%, transparent 58%);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+      animation: mp-spin 1.15s linear infinite;
+    }
+    .ai-spinner-badge {
+      position: absolute; inset: 0; margin: auto; width: 9px; height: 9px;
+      background: linear-gradient(135deg, #3b5bdb 0%, #6c8fff 100%); border-radius: 28%;
+    }
+    @keyframes mp-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .ai-spinner-ring { animation: none; opacity: 0.55; } }
+    .slow-notice {
+      display: block; font-size: 0.68rem; color: #7d8fb3; line-height: 1.5; max-width: 34ch;
+      margin-top: 0.35rem; opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.4s ease;
+    }
+    .slow-notice.visible { opacity: 1; max-height: 3em; }
 
     /* ── API key panel ── */
     .key-status-badge {
@@ -321,7 +337,7 @@
 
       <p class="page-eyebrow">Reading Assessment</p>
       <h1 class="page-title">Probe Generator</h1>
-      <p class="page-subtitle">Define your parameters below and let AI generate a fresh 250–300 word narrative reading probe from scratch — then review, edit, format, and print a dignity-preserving two-page packet: a clean student copy and a separate teacher scoring page.</p>
+      <p class="page-subtitle">Define your parameters below and let AI generate a fresh 250–300 word narrative reading probe from scratch — then review, edit, format, and print a two-page packet: a clean student copy and a separate teacher scoring page.</p>
 
       <div class="ferpa-line">
         <span class="ferpa-notice">
@@ -431,7 +447,7 @@
           </button>
           <span class="ai-status" id="gen-status"></span>
         </div>
-        <p class="slow-notice" id="slow-notice">Still generating… Gemini can take a bit longer on busy periods or with longer vocabulary lists. Hang tight.</p>
+        <p class="slow-notice" id="slow-notice">Still working &mdash; this can take up to a minute for complex requests.</p>
       </div>
 
       <!-- ═══════════════════════════════════
@@ -605,8 +621,24 @@
      STATE
   ══════════════════════════════════════════════════════════════ */
   var _activeText = '';   // the text that will be formatted into the probe
-  var GEMINI_MODEL = 'gemini-2.0-flash';
   var KEY_STORAGE = 'mpowered_tpt_gemini_key';
+
+  // ── Model selection — capped on purpose, not just picked ──
+  //    A prior incident (Aug 5-6, 2026) traced an unexpectedly large
+  //    Gemini bill to a model override with no ceiling that silently
+  //    escalated to a Pro-tier model. This file has no override surface
+  //    at all — GEMINI_MODEL below is the only place the model is ever
+  //    set — but stays deliberately restricted to the cheap/fast tier
+  //    anyway: buyers bring their own key, most on the free tier (and
+  //    as of April 2026 Google no longer offers Pro-tier models on the
+  //    free tier at all — Flash/Flash-Lite only), and a single 250-300
+  //    word narrative passage doesn't need Pro-level capability. Only
+  //    ever change GEMINI_MODEL to something already in ALLOWED_MODELS.
+  var ALLOWED_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+  var GEMINI_MODEL = 'gemini-2.5-flash-lite';
+  if (ALLOWED_MODELS.indexOf(GEMINI_MODEL) === -1) {
+    throw new Error('GEMINI_MODEL "' + GEMINI_MODEL + '" is not in ALLOWED_MODELS — add it there first if this is intentional.');
+  }
 
   /* ══════════════════════════════════════════════════════════════
      API KEY — local-only, never sent anywhere but Google's API
@@ -708,10 +740,10 @@
 
     btn.disabled         = true;
     statusEl.className   = 'ai-status running';
-    statusEl.innerHTML   = '<span class="ai-spinner"></span> Generating probe&hellip;';
+    statusEl.innerHTML   = '<span class="ai-spinner"><span class="ai-spinner-ring"></span><span class="ai-spinner-badge"></span></span> Generating probe&hellip;';
     slowEl.classList.remove('visible');
     clearTimeout(_slowTimer);
-    _slowTimer = setTimeout(function() { slowEl.classList.add('visible'); }, 15000);
+    _slowTimer = setTimeout(function() { slowEl.classList.add('visible'); }, 12000);
 
     // Hide previous review panel while regenerating
     document.getElementById('review-panel').classList.remove('visible');

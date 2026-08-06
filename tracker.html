@@ -139,9 +139,30 @@
     }
     .btn-submit:hover:not(:disabled) { background: rgba(52,211,153,0.22); border-color: rgba(52,211,153,0.6); }
     .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
-    #submit-status { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #8b96bf; }
+    #submit-status { display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #8b96bf; }
     #submit-status.ok  { color: #34d399; }
     #submit-status.err { color: #f87171; }
+    /* ── M-branded spinner: rotating brand-gradient ring around the logo badge ── */
+    .ai-spinner { position: relative; width: 16px; height: 16px; flex-shrink: 0; }
+    .ai-spinner-ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0%, #6c8fff 16%, #3b5bdb 42%, transparent 58%);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+      animation: mp-spin 1.15s linear infinite;
+    }
+    .ai-spinner-badge {
+      position: absolute; inset: 0; margin: auto; width: 9px; height: 9px;
+      background: linear-gradient(135deg, #3b5bdb 0%, #6c8fff 100%); border-radius: 28%;
+    }
+    @keyframes mp-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .ai-spinner-ring { animation: none; opacity: 0.55; } }
+    .ai-status-note {
+      display: block; font-family: 'Inter', sans-serif; font-size: 0.68rem; color: #7d8fb3;
+      line-height: 1.5; margin-top: 0.35rem; max-width: 34ch;
+      opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.4s ease;
+    }
+    .ai-status-note.visible { opacity: 1; max-height: 3em; }
 
     /* ── Post-Submit Modal (shared modal pattern from index.html) ── */
     .modal-backdrop {
@@ -347,6 +368,7 @@
             <button id="btn-submit" class="btn-submit" disabled>Submit Session</button>
             <span id="submit-status"></span>
           </div>
+          <div class="ai-status-note" id="submit-status-note">Still working &mdash; this can take up to a minute for complex requests.</div>
 
         </div><!-- /session-section -->
 
@@ -429,6 +451,7 @@
   var _roster  = [];   // all parsed student rows
   var _student = null; // currently selected student row (array)
   var _goals   = [];   // parsed goals for current student
+  var _submitPatienceTimer = null; // reveals the "still working" note if submit runs past 12s
 
   /* ══════════════════════════════════════════════════════════════
      GAS POST helper — beta-gated
@@ -951,10 +974,15 @@
       return;
     }
 
+    var noteEl = document.getElementById('submit-status-note');
+
     submitBtn.disabled       = true;
     submitBtn.textContent    = 'Submitting…';
-    statusEl.textContent     = '';
+    statusEl.innerHTML       = '<span class="ai-spinner"><span class="ai-spinner-ring"></span><span class="ai-spinner-badge"></span></span> Submitting&hellip;';
     statusEl.className       = '';
+    noteEl.classList.remove('visible');
+    clearTimeout(_submitPatienceTimer);
+    _submitPatienceTimer = setTimeout(function() { noteEl.classList.add('visible'); }, 12000);
 
     var payload = {
       action      : 'logGoalData',
@@ -990,6 +1018,8 @@
         showToast('Submit failed — check console for details.', 'error');
       })
       .finally(function() {
+        clearTimeout(_submitPatienceTimer);
+        noteEl.classList.remove('visible');
         submitBtn.disabled    = false;
         submitBtn.textContent = 'Submit Session';
       });

@@ -113,8 +113,27 @@
     .ai-status.running { color: #6c8fff; }
     .ai-status.done    { color: #34d399; }
     .ai-status.error   { color: #f87171; }
-    .ai-spinner { width: 13px; height: 13px; border: 2px solid #252c42; border-top-color: #6c8fff; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── M-branded spinner: rotating brand-gradient ring around the logo badge ── */
+    .ai-spinner { position: relative; width: 16px; height: 16px; flex-shrink: 0; }
+    .ai-spinner-ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0%, #6c8fff 16%, #3b5bdb 42%, transparent 58%);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+      animation: mp-spin 1.15s linear infinite;
+    }
+    .ai-spinner-badge {
+      position: absolute; inset: 0; margin: auto; width: 9px; height: 9px;
+      background: linear-gradient(135deg, #3b5bdb 0%, #6c8fff 100%); border-radius: 28%;
+    }
+    @keyframes mp-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .ai-spinner-ring { animation: none; opacity: 0.55; } }
+    .ai-status-note {
+      display: block; font-family: 'Inter', sans-serif; font-size: 0.68rem; color: #7d8fb3;
+      line-height: 1.5; margin-top: 0.35rem; max-width: 34ch;
+      opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.4s ease;
+    }
+    .ai-status-note.visible { opacity: 1; max-height: 3em; }
 
     /* ── Review textarea ── */
     #generate-review {
@@ -449,6 +468,7 @@
           </button>
           <span class="ai-status" id="gen-status"></span>
         </div>
+        <div class="ai-status-note" id="gen-status-note">Still working &mdash; this can take up to a minute for complex requests.</div>
       </div>
 
       <!-- ═══════════════════════════════════
@@ -651,6 +671,7 @@
   ══════════════════════════════════════════════════════════════ */
   var _activeText = '';   // the text that will be formatted into the probe
   var _activeProbeId = ''; // generated once formatProbe() succeeds; stamped onto score submissions
+  var _genPatienceTimer = null; // reveals the "still working" note if generation runs past 12s
 
   var GAS_URL = 'https://script.google.com/macros/s/AKfycbz4YTW46DN8u3bbvc_6n4PpzswBBCBdmoIfa_mXEPLhTly-1EDlHWPiQqpfBLQIdXic/exec';
 
@@ -799,11 +820,15 @@
     if (!topic)        { alert('Please enter a Topic / Theme.'); return; }
 
     var statusEl = document.getElementById('gen-status');
+    var noteEl   = document.getElementById('gen-status-note');
     var btn      = document.getElementById('btn-generate-probe');
 
     btn.disabled         = true;
     statusEl.className   = 'ai-status running';
-    statusEl.innerHTML   = '<span class="ai-spinner"></span> Generating probe&hellip;';
+    statusEl.innerHTML   = '<span class="ai-spinner"><span class="ai-spinner-ring"></span><span class="ai-spinner-badge"></span></span> Generating probe&hellip;';
+    noteEl.classList.remove('visible');
+    clearTimeout(_genPatienceTimer);
+    _genPatienceTimer = setTimeout(function() { noteEl.classList.add('visible'); }, 12000);
 
     // Hide previous review panel while regenerating
     document.getElementById('review-panel').classList.remove('visible');
@@ -838,12 +863,16 @@
       document.getElementById('review-panel').classList.add('visible');
       document.getElementById('review-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+      clearTimeout(_genPatienceTimer);
+      noteEl.classList.remove('visible');
       statusEl.className   = 'ai-status done';
       statusEl.innerHTML   = '&#10003; Done &mdash; review the passage below';
       btn.disabled = false;
     })
     .catch(function(err) {
       console.error('[generateProbeText]', err);
+      clearTimeout(_genPatienceTimer);
+      noteEl.classList.remove('visible');
       statusEl.className   = 'ai-status error';
       statusEl.textContent = 'Error: ' + (err.message || 'unknown');
       btn.disabled = false;
@@ -913,6 +942,8 @@
     _activeText = '';
     _activeProbeId = '';
     discardGenerated();
+    clearTimeout(_genPatienceTimer);
+    document.getElementById('gen-status-note').classList.remove('visible');
     document.getElementById('gen-status').className   = 'ai-status';
     document.getElementById('gen-status').textContent = '';
     document.getElementById('probe-output-panel').classList.remove('visible');
